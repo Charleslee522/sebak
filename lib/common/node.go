@@ -140,9 +140,10 @@ func (v *Validator) RemoveValidators(validators ...*Validator) error {
 	return nil
 }
 func (v *Validator) Info() ([]byte, error) {
-	var neighbors []string
+	var neighbors = make(map[string]struct{})
 	for _, neighbor := range v.validators {
-		neighbors = append(neighbors, neighbor.address)
+		neighbors[neighbor.Address()] = struct{}{}
+		//neighbors = append(neighbors, neighbor.address)
 	}
 
 	return json.Marshal(map[string]interface{}{
@@ -154,10 +155,16 @@ func (v *Validator) Info() ([]byte, error) {
 }
 
 func (v *Validator) MarshalJSON() ([]byte, error) {
+	var neighbors = make(map[string]struct{})
+	for _, neighbor := range v.validators {
+		neighbors[neighbor.Address()] = struct{}{}
+		//neighbors = append(neighbors, neighbor.address)
+	}
 	return json.Marshal(map[string]interface{}{
 		"address":  v.Address(),
 		"alias":    v.Alias(),
 		"endpoint": v.Endpoint().String(),
+		"validators": neighbors,
 		//"validators": v.validators,
 	})
 }

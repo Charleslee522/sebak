@@ -447,7 +447,6 @@ func TestNodeHandler(t *testing.T) {
 		resp.Body.Close()
 		wg.Done()
 	}()
-	//time.Sleep(time.Second * 2)
 	for i := 0; i < 10; i++ {
 		var newValidator *sebakcommon.Validator
 		kp, _ := keypair.Random()
