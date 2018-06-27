@@ -29,6 +29,7 @@ type Node interface {
 	HasValidators(string) bool
 	RemoveValidators(validators ...*Validator) error
 	Serialize() ([]byte, error)
+	Info() ([]byte, error)
 }
 
 type ValidatorFromJSON struct {
@@ -138,9 +139,7 @@ func (v *Validator) RemoveValidators(validators ...*Validator) error {
 
 	return nil
 }
-
-func (v *Validator) MarshalJSON() ([]byte, error) {
-
+func (v *Validator) Info() ([]byte, error) {
 	var neighbors []string
 	for _, neighbor := range v.validators {
 		neighbors = append(neighbors, neighbor.address)
@@ -151,6 +150,15 @@ func (v *Validator) MarshalJSON() ([]byte, error) {
 		"alias":      v.Alias(),
 		"endpoint":   v.Endpoint().String(),
 		"validators": neighbors,
+	})
+}
+
+func (v *Validator) MarshalJSON() ([]byte, error) {
+	return json.Marshal(map[string]interface{}{
+		"address":  v.Address(),
+		"alias":    v.Alias(),
+		"endpoint": v.Endpoint().String(),
+		//"validators": v.validators,
 	})
 }
 

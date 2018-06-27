@@ -33,7 +33,7 @@ func GetNodeHandler(ctx context.Context) http.HandlerFunc {
 			callBackFunc := func(args ...interface{}) (btSerialized []byte, err error) {
 				cn := args[1].(sebakcommon.Node)
 				var cnSerialized []byte
-				if cnSerialized, err = cn.Serialize(); err != nil {
+				if cnSerialized, err = cn.Info(); err != nil {
 					return []byte{}, sebakerror.ErrorSerialized
 				}
 				return cnSerialized, nil
@@ -41,7 +41,7 @@ func GetNodeHandler(ctx context.Context) http.HandlerFunc {
 			streaming(observer.NodeObserver, w, event, callBackFunc, readyChan)
 		default:
 			var cnSerialized []byte
-			if cnSerialized, err = cn.Serialize(); err != nil {
+			if cnSerialized, err = cn.Info(); err != nil {
 				http.Error(w, "Error reading request body", http.StatusInternalServerError)
 				return
 			}
