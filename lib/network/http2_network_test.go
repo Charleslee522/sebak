@@ -8,14 +8,15 @@ import (
 	"testing"
 	"unicode"
 
-	"boscoin.io/sebak/lib/common"
-	"github.com/stellar/go/keypair"
-	"github.com/stretchr/testify/assert"
 	"math/rand"
 	"net"
 	"strconv"
 	"sync"
 	"time"
+
+	"boscoin.io/sebak/lib/common"
+	"github.com/stellar/go/keypair"
+	"github.com/stretchr/testify/assert"
 )
 
 var testPort = "5000"
@@ -83,7 +84,7 @@ func pingAndWait(t *testing.T, c0 NetworkClient) {
 	}
 }
 
-func createNewHTTP2Network(t *testing.T) (kp *keypair.Full, mn *HTTP2Network, validator *sebakcommon.Validator) {
+func createNewHTTP2Network(t *testing.T) (kp *keypair.Full, mn *HTTP2Network, validator *sebakcommon.Node) {
 	g := NewKeyGenerator(dirPath, certPath, keyPath)
 
 	var config HTTP2NetworkConfig

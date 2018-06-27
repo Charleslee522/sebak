@@ -24,7 +24,7 @@ import (
 	"strconv"
 )
 
-type FlagValidators []*sebakcommon.Validator
+type FlagValidators []*sebakcommon.Node
 
 func (f *FlagValidators) Type() string {
 	return "validators"
