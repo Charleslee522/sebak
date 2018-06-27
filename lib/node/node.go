@@ -1,24 +1,21 @@
-package sebakcommon
+package sebaknode
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
-	"net/url"
-	"strconv"
-	"strings"
 	"sync"
+
+	"boscoin.io/sebak/lib/common"
 
 	"github.com/stellar/go/keypair"
 )
 
-var DefaultNodePort int = 12345
-
 type NodeFromJSON struct {
-	Alias      string           `json:"alias"`
-	Address    string           `json:"address"`
-	Endpoint   *Endpoint        `json:"endpoint"`
-	Validators map[string]*Node `json:"Validators"`
+	Alias      string                `json:"alias"`
+	Address    string                `json:"address"`
+	Endpoint   *sebakcommon.Endpoint `json:"endpoint"`
+	Validators map[string]*Node      `json:"Validators"`
+	State      NodeState             `json:"state"`
 }
 
 type Node struct {
@@ -29,7 +26,7 @@ type Node struct {
 	state      NodeState
 	alias      string
 	address    string
-	endpoint   *Endpoint
+	endpoint   *sebakcommon.Endpoint
 	validators map[ /* Node.Address() */ string]*Node
 }
 
@@ -60,6 +57,22 @@ func (n *Node) State() NodeState {
 	return n.state
 }
 
+func (n *Node) SetBooting() {
+	n.state = NodeStateBOOTING
+}
+
+func (n *Node) SetCatchup() {
+	n.state = NodeStateCATCHUP
+}
+
+func (n *Node) SetConsensus() {
+	n.state = NodeStateCONSENSUS
+}
+
+func (n *Node) SetTerminating() {
+	n.state = NodeStateTERMINATING
+}
+
 func (n *Node) Address() string {
 	return n.address
 }
@@ -81,7 +94,7 @@ func (n *Node) SetAlias(s string) {
 	n.alias = s
 }
 
-func (n *Node) Endpoint() *Endpoint {
+func (n *Node) Endpoint() *sebakcommon.Endpoint {
 	return n.endpoint
 }
 
@@ -127,6 +140,7 @@ func (n *Node) MarshalJSON() ([]byte, error) {
 		"address":  n.Address(),
 		"alias":    n.Alias(),
 		"endpoint": n.Endpoint().String(),
+		"state":    n.State().String(),
 		//"validators": n.validators,
 	})
 }
@@ -141,6 +155,7 @@ func (n *Node) UnmarshalJSON(b []byte) error {
 	n.address = va.Address
 	n.endpoint = va.Endpoint
 	n.validators = va.Validators
+	n.state = va.State
 
 	return nil
 }
@@ -154,7 +169,7 @@ func MakeAlias(address string) string {
 	return fmt.Sprintf("%s.%s", address[:4], address[l-8:l-4])
 }
 
-func NewNode(address string, endpoint *Endpoint, alias string) (n *Node, err error) {
+func NewNode(address string, endpoint *sebakcommon.Endpoint, alias string) (n *Node, err error) {
 	if len(alias) < 1 {
 		alias = MakeAlias(address)
 	}
@@ -164,7 +179,7 @@ func NewNode(address string, endpoint *Endpoint, alias string) (n *Node, err err
 	}
 
 	n = &Node{
-		state:      NodeStateBOOTING,
+		state:      NodeStateNONE,
 		alias:      alias,
 		address:    address,
 		endpoint:   endpoint,
@@ -181,43 +196,4 @@ func NewNodeFromString(b []byte) (*Node, error) {
 	}
 
 	return &v, nil
-}
-
-func ParseNodeEndpoint(endpoint string) (u *Endpoint, err error) {
-	var parsed *url.URL
-	parsed, err = url.Parse(endpoint)
-	if err != nil {
-		return
-	}
-	if len(parsed.Scheme) < 1 {
-		err = errors.New("missing scheme")
-		return
-	}
-
-	if len(parsed.Port()) < 1 && parsed.Scheme != "memory" {
-		parsed.Host = fmt.Sprintf("%s:%d", parsed.Host, DefaultNodePort)
-	}
-
-	if parsed.Scheme != "memory" {
-		var port string
-		port = parsed.Port()
-
-		var portInt int64
-		if portInt, err = strconv.ParseInt(port, 10, 64); err != nil {
-			return
-		} else if portInt < 1 {
-			err = errors.New("invalid port")
-			return
-		}
-
-		if len(parsed.Host) < 1 || strings.HasPrefix(parsed.Host, "127.0.") {
-			parsed.Host = fmt.Sprintf("localhost:%s", parsed.Port())
-		}
-	}
-
-	parsed.Host = strings.ToLower(parsed.Host)
-
-	u = (*Endpoint)(parsed)
-
-	return
 }
