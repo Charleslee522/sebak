@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 
+	"boscoin.io/sebak/lib/observer"
 	"github.com/stellar/go/keypair"
 )
 
@@ -46,6 +47,11 @@ type Validator struct {
 	address    string
 	endpoint   *Endpoint
 	validators map[ /* Node.Address() */ string]*Validator
+}
+
+func (v *Validator) Unlock() {
+	v.Mutex.Unlock()
+	observer.NodeObserver.Trigger("change", v)
 }
 
 func (v *Validator) String() string {
@@ -134,11 +140,17 @@ func (v *Validator) RemoveValidators(validators ...*Validator) error {
 }
 
 func (v *Validator) MarshalJSON() ([]byte, error) {
+
+	var neighbors []string
+	for _, neighbor := range v.validators {
+		neighbors = append(neighbors, neighbor.address)
+	}
+
 	return json.Marshal(map[string]interface{}{
-		"address":  v.Address(),
-		"alias":    v.Alias(),
-		"endpoint": v.Endpoint().String(),
-		//"validators": v.validators,
+		"address":    v.Address(),
+		"alias":      v.Alias(),
+		"endpoint":   v.Endpoint().String(),
+		"validators": neighbors,
 	})
 }
 
