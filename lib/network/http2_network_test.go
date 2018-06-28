@@ -40,10 +40,10 @@ func getPort() string {
 	return testPort
 }
 
-func ExampleHttp2NetworkConfigCreateWithNonTLS() {
-
+func TestHttp2NetworkConfigCreateWithNonTLS(t *testing.T) {
 	var config HTTP2NetworkConfig
-	endpoint, err := sebakcommon.NewEndpointFromString("https://localhost:5000?NodeName=n1")
+	port := getPort()
+	endpoint, err := sebakcommon.NewEndpointFromString(fmt.Sprintf("https://localhost:%s?NodeName=n1", port))
 	if err != nil {
 		fmt.Print("Error in NewEndpointFromString")
 	}
@@ -56,11 +56,8 @@ func ExampleHttp2NetworkConfigCreateWithNonTLS() {
 	if err != nil {
 		fmt.Print("Error in NewHTTP2NetworkConfigFromEndpoint")
 	}
-	fmt.Println(config.NodeName)
-	fmt.Println(config.Addr)
-
-	// Output: n1
-	// localhost:5000
+	assert.Equal(t, "n1", config.NodeName)
+	assert.Equal(t, "localhost:"+port, config.Addr)
 }
 
 const (
@@ -157,7 +154,7 @@ func TestHTTP2NetworkGetNodeInfo(t *testing.T) {
 	server := localNode.Endpoint().String()
 	client := v.Endpoint().String()
 
-	assert.Equal(t, server, client, "Server endpoint and received endpoint should be the same.")
+	assert.Equal(t, client, server, "Server endpoint and received endpoint should be the same.")
 	assert.Equal(t, localNode.Address(), v.Address(), "Server address and received address should be the same.")
 }
 
@@ -184,7 +181,7 @@ func TestHTTP2NetworkMessageBrokerResponseMessage(t *testing.T) {
 
 	returnMsg, _ := c0.Connect(localNode)
 
-	assert.Equal(t, string(returnMsg), "ResponseMessage", "The connectNode and the return should be the same.")
+	assert.Equal(t, "ResponseMessage", string(returnMsg), "The connectNode and the return should be the same.")
 }
 
 func TestHTTP2NetworkConnect(t *testing.T) {
@@ -204,7 +201,7 @@ func TestHTTP2NetworkConnect(t *testing.T) {
 	returnMsg, _ := c0.Connect(localNode)
 	returnStr := removeWhiteSpaces(string(returnMsg))
 
-	assert.Equal(t, returnStr, nodeStr, "The connectNode and the return should be the same.")
+	assert.Equal(t, nodeStr, returnStr, "The connectNode and the return should be the same.")
 }
 
 func TestHTTP2NetworkSendMessage(t *testing.T) {
@@ -224,7 +221,7 @@ func TestHTTP2NetworkSendMessage(t *testing.T) {
 	returnStr := removeWhiteSpaces(string(returnMsg))
 	sendMsg := removeWhiteSpaces(msg.String())
 
-	assert.Equal(t, returnStr, sendMsg, "The sendMessage and the return should be the same.")
+	assert.Equal(t, sendMsg, returnStr, "The sendMessage and the return should be the same.")
 }
 
 func TestHTTP2NetworkSendBallot(t *testing.T) {
@@ -243,5 +240,5 @@ func TestHTTP2NetworkSendBallot(t *testing.T) {
 	returnStr := removeWhiteSpaces(string(returnMsg))
 	sendMsg := removeWhiteSpaces(msg.String())
 
-	assert.Equal(t, returnStr, sendMsg, "The sendBallot and the return should be the same.")
+	assert.Equal(t, sendMsg, returnStr, "The sendBallot and the return should be the same.")
 }
