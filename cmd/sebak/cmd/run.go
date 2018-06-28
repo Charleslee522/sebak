@@ -249,13 +249,13 @@ func parseFlagsNode() {
 
 func runNode() {
 	// create current Node
-	currentNode, err := sebaknode.NewValidator(kp.Address(), nodeEndpoint, "")
+	localNode, err := sebaknode.NewLocalNode(kp.Address(), nodeEndpoint, "")
 	if err != nil {
 		log.Error("failed to launch main node", "error", err)
 		return
 	}
-	currentNode.SetKeypair(kp)
-	currentNode.AddValidators(flagValidators...)
+	localNode.SetKeypair(kp)
+	localNode.AddValidators(flagValidators...)
 
 	// create network
 	nt, err := sebaknetwork.NewNetwork(nodeEndpoint)
@@ -268,9 +268,9 @@ func runNode() {
 	signTh, err := strconv.Atoi(flagSignThreshold)
 	acceptTh, err := strconv.Atoi(flagAcceptThreshold)
 	policy, _ := sebak.NewDefaultVotingThresholdPolicy(100, signTh, acceptTh)
-	policy.SetValidators(len(currentNode.GetValidators()) + 1) // including 'self'
+	policy.SetValidators(len(localNode.GetValidators()) + 1) // including 'self'
 
-	isaac, err := sebak.NewISAAC([]byte(flagNetworkID), currentNode, policy)
+	isaac, err := sebak.NewISAAC([]byte(flagNetworkID), localNode, policy)
 	if err != nil {
 		log.Error("failed to launch consensus", "error", err)
 		return
@@ -286,7 +286,7 @@ func runNode() {
 	// Execution group.
 	var g run.Group
 	{
-		nr := sebak.NewNodeRunner(flagNetworkID, currentNode, policy, nt, isaac, st)
+		nr := sebak.NewNodeRunner(flagNetworkID, localNode, policy, nt, isaac, st)
 		g.Add(func() error {
 			if err := nr.Start(); err != nil {
 				log.Crit("failed to start node", "error", err)
