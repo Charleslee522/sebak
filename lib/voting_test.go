@@ -45,7 +45,7 @@ func TestAddVotingResult(t *testing.T) {
 
 	vr, _ := NewVotingResult(ballot0)
 	if err := vr.Add(ballot1); err == nil {
-		t.Error("`VotingResult.Add` must occurr the `ErrorHashDoesNotMatch`")
+		t.Error("`VotingResult.Add` must occur the `ErrorHashDoesNotMatch`")
 	}
 
 	ballot1.B.Hash = ballot0.MessageHash()

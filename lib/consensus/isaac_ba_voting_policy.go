@@ -35,7 +35,7 @@ type IsaacBaVotingThresholdPolicy struct {
 
 func (vt *IsaacBaVotingThresholdPolicy) String() string {
 	o := sebakcommon.MustJSONMarshal(map[string]interface{}{
-		"threshold":  vt.threshold,
+		"threshold":  vt.threshold.Int(),
 		"validators": vt.validators,
 	})
 
@@ -73,7 +73,7 @@ func (vt *IsaacBaVotingThresholdPolicy) Reset(state sebakcommon.BallotState, thr
 	return nil
 }
 
-func NewIsaacBaVotingThresholdPolicy(threshold int) (*IsaacBaVotingThresholdPolicy, error) {
+func NewIsaacBAVotingThresholdPolicy(threshold int) (*IsaacBaVotingThresholdPolicy, error) {
 	if th, err := NewPercent(threshold); err != nil {
 		return nil, err
 	} else {

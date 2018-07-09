@@ -206,3 +206,8 @@ func (is *IsaacBA) receiveBallotVotingStates(ballot sebak.Ballot) (vs sebak.Voti
 
 	return
 }
+
+func (is *IsaacBA) IsProposer() {
+	validators := is.Node.GetValidators()
+
+}

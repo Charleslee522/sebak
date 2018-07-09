@@ -134,7 +134,7 @@ func TestISAACNewIncomingMessage(t *testing.T) {
 	{
 		var err error
 		if _, err = is.ReceiveMessage(m); err != sebakerror.ErrorNewButKnownMessage {
-			t.Error("incoming known message must occurr `ErrorNewButKnownMessage`")
+			t.Error("incoming known message must occur `ErrorNewButKnownMessage`")
 			return
 		}
 		if !is.Boxes.HasMessage(m) {

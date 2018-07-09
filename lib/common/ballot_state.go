@@ -33,6 +33,23 @@ func (s BallotState) String() string {
 	return ""
 }
 
+func (s BallotState) UInt() uint {
+	switch s {
+	case 0:
+		return 0
+	case 1:
+		return 1
+	case 2:
+		return 2
+	case 3:
+		return 3
+	case 4:
+		return 4
+	default:
+		return 0
+	}
+}
+
 func (s BallotState) Next() BallotState {
 	n := s + 1
 	if n > BallotStateALLCONFIRM {

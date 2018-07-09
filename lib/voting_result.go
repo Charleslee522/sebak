@@ -2,7 +2,6 @@ package sebak
 
 import (
 	"encoding/json"
-	"math"
 
 	"boscoin.io/sebak/lib/common"
 	"boscoin.io/sebak/lib/error"
@@ -34,79 +33,19 @@ func NewVotingResultBallotFromBallot(ballot Ballot) VotingResultBallot {
 
 type VotingResultBallots map[ /* NodeKey */ string]VotingResultBallot
 
-// VotingStateStaging will keep the snapshot at changing state.
-type VotingStateStaging struct {
-	State         sebakcommon.BallotState
-	PreviousState sebakcommon.BallotState
-
-	ID          string     // ID is unique and sequential
-	MessageHash string     // MessageHash is `Message.Hash`
-	VotingHole  VotingHole // voting is closed and it's last `VotingHole`
-	Reason      error      // if `VotingNO` is concluded, the reason
-
-	Ballots map[ /* NodeKey */ string]VotingResultBallot
-}
-
-func (vs VotingStateStaging) String() string {
-	encoded, _ := json.MarshalIndent(vs, "", "  ")
-	return string(encoded)
-}
-
-func (vs VotingStateStaging) IsChanged() bool {
-	return vs.State > vs.PreviousState
-}
-
-func (vs VotingStateStaging) IsEmpty() bool {
-	return len(vs.Ballots) < 1
-}
-
-func (vs VotingStateStaging) IsClosed() bool {
-	if vs.IsEmpty() {
-		return false
-	}
-	if vs.VotingHole == VotingNO {
-		return true
-	}
-	if vs.State == sebakcommon.BallotStateALLCONFIRM {
-		return true
-	}
-
-	return false
-}
-
-func (vs VotingStateStaging) IsStorable() bool {
-	if !vs.IsClosed() {
-		return false
-	}
-	if vs.State != sebakcommon.BallotStateALLCONFIRM {
-		return false
-	}
-	if vs.VotingHole == VotingNO {
-		return false
-	}
-
-	return true
-}
-
 type VotingResult struct {
 	sebakcommon.SafeLock
 
 	ID          string                  // ID is unique and sequential
 	MessageHash string                  // MessageHash is `Message.Hash`
 	Source      string                  // Source is `Ballot.Source()`
-	State       sebakcommon.BallotState // Latest `BallotState`
+	BallotState sebakcommon.BallotState // Latest `BallotState`
 	Ballots     map[sebakcommon.BallotState]VotingResultBallots
 	Staging     []VotingStateStaging // state changing histories
 }
 
 func NewVotingResult(ballot Ballot) (vr *VotingResult, err error) {
-	ballots := map[sebakcommon.BallotState]VotingResultBallots{
-		sebakcommon.BallotStateNONE:       VotingResultBallots{},
-		sebakcommon.BallotStateINIT:       VotingResultBallots{},
-		sebakcommon.BallotStateSIGN:       VotingResultBallots{},
-		sebakcommon.BallotStateACCEPT:     VotingResultBallots{},
-		sebakcommon.BallotStateALLCONFIRM: VotingResultBallots{},
-	}
+	ballots := map[sebakcommon.BallotState]VotingResultBallots{}
 
 	ballots[ballot.State()][ballot.B.NodeKey] = NewVotingResultBallotFromBallot(ballot)
 
@@ -114,7 +53,7 @@ func NewVotingResult(ballot Ballot) (vr *VotingResult, err error) {
 		ID:          sebakcommon.GetUniqueIDFromUUID(),
 		MessageHash: ballot.MessageHash(),
 		Source:      ballot.Source(),
-		State:       ballot.State(),
+		BallotState: ballot.State(),
 		Ballots:     ballots,
 	}
 
@@ -126,14 +65,14 @@ func (vr *VotingResult) IsClosed() bool {
 }
 
 func (vr *VotingResult) SetState(state sebakcommon.BallotState) bool {
-	if vr.State >= state {
+	if vr.BallotState.UInt() >= state.UInt() {
 		return false
 	}
 
 	vr.Lock()
 	defer vr.Unlock()
 
-	vr.State = state
+	vr.BallotState = state
 
 	return true
 }
@@ -257,12 +196,12 @@ var CheckVotingThresholdSequence = []sebakcommon.BallotState{
 }
 
 func (vr *VotingResult) MakeResult(policy sebakcommon.VotingThresholdPolicy) (VotingHole, sebakcommon.BallotState, bool) {
-	if vr.State == sebakcommon.BallotStateALLCONFIRM {
+	if vr.BallotState == sebakcommon.BallotStateALLCONFIRM {
 		return VotingNOTYET, sebakcommon.BallotStateALLCONFIRM, false
 	}
 
 	for _, state := range CheckVotingThresholdSequence {
-		if state < vr.State {
+		if state < vr.BallotState {
 			break
 		}
 
@@ -276,7 +215,7 @@ func (vr *VotingResult) MakeResult(policy sebakcommon.VotingThresholdPolicy) (Vo
 		}
 	}
 
-	return VotingNOTYET, vr.State, false
+	return VotingNOTYET, vr.BallotState, false
 }
 
 func (vr *VotingResult) ChangeState(votingHole VotingHole, state sebakcommon.BallotState) (vs VotingStateStaging, err error) {
@@ -285,7 +224,7 @@ func (vr *VotingResult) ChangeState(votingHole VotingHole, state sebakcommon.Bal
 		return
 	}
 
-	vs = vr.MakeStaging(votingHole, state, vr.State, state)
+	vs = vr.MakeStaging(votingHole, state, vr.BallotState, state)
 
 	vr.Lock()
 	defer vr.Unlock()
@@ -315,7 +254,7 @@ func (vr *VotingResult) LatestStaging() VotingStateStaging {
 }
 
 func (vr *VotingResult) CanGetResult(policy sebakcommon.VotingThresholdPolicy) bool {
-	if vr.State == sebakcommon.BallotStateALLCONFIRM {
+	if vr.BallotState == sebakcommon.BallotStateALLCONFIRM {
 		return false
 	}
 
@@ -330,114 +269,4 @@ func (vr *VotingResult) CanGetResult(policy sebakcommon.VotingThresholdPolicy) b
 	}
 
 	return false
-}
-
-type ISAACVotingThresholdPolicy struct {
-	init   int // must be percentile
-	sign   int
-	accept int
-
-	validators int
-	connected  int
-}
-
-func (vt *ISAACVotingThresholdPolicy) String() string {
-	o := sebakcommon.MustJSONMarshal(map[string]interface{}{
-		"init":       vt.init,
-		"sign":       vt.sign,
-		"accept":     vt.accept,
-		"validators": vt.validators,
-	})
-
-	return string(o)
-}
-
-func (vt *ISAACVotingThresholdPolicy) Validators() int {
-	return vt.validators
-}
-
-func (vt *ISAACVotingThresholdPolicy) SetValidators(n int) error {
-	if n < 1 {
-		return sebakerror.ErrorVotingThresholdInvalidValidators
-	}
-
-	vt.validators = n
-
-	return nil
-}
-
-func (vt *ISAACVotingThresholdPolicy) Connected() int {
-	return vt.connected
-}
-
-func (vt *ISAACVotingThresholdPolicy) SetConnected(n int) error {
-	if n < 1 {
-		return sebakerror.ErrorVotingThresholdInvalidValidators
-	}
-
-	vt.connected = n
-
-	return nil
-}
-
-func (vt *ISAACVotingThresholdPolicy) Threshold(state sebakcommon.BallotState) int {
-	var t int
-	var va int
-	switch state {
-	case sebakcommon.BallotStateINIT:
-		t = vt.init
-		va = vt.connected + 1
-	case sebakcommon.BallotStateSIGN:
-		t = vt.sign
-		va = vt.validators
-	case sebakcommon.BallotStateACCEPT:
-		t = vt.accept
-		va = vt.validators
-	}
-
-	v := float64(va) * (float64(t) / float64(100))
-	return int(math.Ceil(v))
-}
-
-func (vt *ISAACVotingThresholdPolicy) Reset(state sebakcommon.BallotState, threshold int) (err error) {
-	if threshold <= 0 {
-		err = sebakerror.ErrorInvalidVotingThresholdPolicy
-		return
-	}
-
-	if threshold > 100 {
-		err = sebakerror.ErrorInvalidVotingThresholdPolicy
-		return
-	}
-
-	switch state {
-	case sebakcommon.BallotStateINIT:
-		vt.init = threshold
-	case sebakcommon.BallotStateSIGN:
-		vt.sign = threshold
-	case sebakcommon.BallotStateACCEPT:
-		vt.accept = threshold
-	}
-
-	return nil
-}
-
-func NewDefaultVotingThresholdPolicy(init, sign, accept int) (vt *ISAACVotingThresholdPolicy, err error) {
-	if init <= 0 || sign <= 0 || accept <= 0 {
-		err = sebakerror.ErrorInvalidVotingThresholdPolicy
-		return
-	}
-	if init > 100 || sign > 100 || accept > 100 {
-		err = sebakerror.ErrorInvalidVotingThresholdPolicy
-		return
-	}
-
-	vt = &ISAACVotingThresholdPolicy{
-		init:       init,
-		sign:       sign,
-		accept:     accept,
-		validators: 0,
-	}
-
-	return
 }
