@@ -28,6 +28,8 @@ type Validator struct {
 	alias    string
 	address  string
 	endpoint *sebakcommon.Endpoint
+
+	VotingPower int64
 }
 
 func (v *Validator) String() string {
@@ -134,10 +136,11 @@ func NewValidator(address string, endpoint *sebakcommon.Endpoint, alias string) 
 	}
 
 	v = &Validator{
-		state:    NodeStateNONE,
-		alias:    alias,
-		address:  address,
-		endpoint: endpoint,
+		state:       NodeStateNONE,
+		alias:       alias,
+		address:     address,
+		endpoint:    endpoint,
+		VotingPower: 0,
 	}
 
 	return

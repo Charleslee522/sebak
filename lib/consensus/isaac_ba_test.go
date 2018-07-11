@@ -51,15 +51,16 @@ func TestIsaacBaInit(t *testing.T) {
 	assert.Equal(t, -1, is.VotingThresholdPolicy.Connected())
 	assert.Equal(t, 1, is.VotingThresholdPolicy.Validators())
 	assert.Equal(t, `{"threshold":66,"validators":1}`, is.VotingThresholdPolicy.String())
-
 }
 
 func TestIsaacBaProposerElection(t *testing.T) {
 	isaacBa := makeIsaacBA(10)
 
-	m := NewDummyMessage(sebakcommon.GenerateUUID())
+	// m := NewDummyMessage(sebakcommon.GenerateUUID())
 
-	assert.Equal(t, true, isaacBa.IsProposer())
+	proposer := GetProposer(isaacBa)
+
+	assert.Equal(t, "", proposer.String())
 }
 
 // func TestIsaacBANewIncomingMessage(t *testing.T) {
