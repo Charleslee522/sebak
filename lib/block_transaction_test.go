@@ -134,41 +134,6 @@ func TestBlockTransactionSaveExisting(t *testing.T) {
 	}
 }
 
-/*
-func TestGetSortedBlockTransactionsByCheckpoint(t *testing.T) {
-	st, _ := sebakstorage.NewTestMemoryLevelDBBackend()
-
-	// create 30 `BlockOperation`
-	var createdOrder []string
-
-	checkpoint := uuid.New().String()
-	for i := 0; i < 10; i++ {
-		bt := TestMakeNewBlockTransaction(1)
-		bt.Checkpoint = checkpoint
-		createdOrder = append(createdOrder, bt.Hash)
-	}
-
-	var saved []BlockTransaction
-	iterFunc, closeFunc := GetBlockTransactionsByCheckpoint(st, checkpoint, false)
-	for {
-		bo, hasNext := iterFunc()
-		if !hasNext {
-			break
-		}
-
-		saved = append(saved, bo)
-	}
-	closeFunc()
-
-	for i, bt := range saved {
-		if bt.Hash != createdOrder[i] {
-			t.Error("order mismatch")
-			break
-		}
-	}
-}
-*/
-
 func TestMultipleBlockTransactionSource(t *testing.T) {
 	kp, _ := keypair.Random()
 	kpAnother, _ := keypair.Random()
