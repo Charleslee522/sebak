@@ -69,11 +69,21 @@ func TestMakeOperation(amount int, addressList ...string) Operation {
 	return op
 }
 
-func TestMakeTransaction(networkID []byte, n int) (kp *keypair.Full, tx Transaction) {
+func TestMakeBlockTransactions(networkID []byte, nTransactions int) (bts []BlockTransaction) {
+	for i := 0; i < nTransactions; i++ {
+		_, tx := TestMakeTransaction(networkID, 1)
+		encoded, _ := tx.Serialize()
+		bt := NewBlockTransactionFromTransaction(tx, encoded)
+		bts = append(bts, bt)
+	}
+	return
+}
+
+func TestMakeTransaction(networkID []byte, nOperation int) (kp *keypair.Full, tx Transaction) {
 	kp, _ = keypair.Random()
 
 	var ops []Operation
-	for i := 0; i < n; i++ {
+	for i := 0; i < nOperation; i++ {
 		ops = append(ops, TestMakeOperation(-1))
 	}
 

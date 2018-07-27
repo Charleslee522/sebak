@@ -2,6 +2,8 @@ package sebak
 
 import (
 	"time"
+
+	"boscoin.io/sebak/lib/common"
 )
 
 type Header struct {
@@ -14,7 +16,7 @@ type Header struct {
 	PrevConsensusResult *ConsensusResult
 
 	prevTotalTxs            uint64
-	blockHash               string // [TODO] Uint256 type
+	BlockHash               string // [TODO] Uint256 type
 	prevConsensusResultHash string // [TODO] Uint256 type
 	// ConsensusPayloadHash    Uint256
 	// ConsensusPayload        Payload  // or []byte
@@ -22,8 +24,9 @@ type Header struct {
 	// [TODO] + smart contract fields
 }
 
-func NewHeader(height uint64, prevResult *ConsensusResult, prevTotalTxs uint64, currentTxs uint64, txRoot string) *Header {
+func NewHeader(height uint64, prevBlockHash string, prevResult *ConsensusResult, prevTotalTxs uint64, currentTxs uint64, txRoot string) *Header {
 	p := Header{
+		PrevBlockHash:       prevBlockHash,
 		Timestamp:           time.Now(),
 		Height:              height,
 		PrevConsensusResult: prevResult,
@@ -47,6 +50,9 @@ func (h *Header) fill() {
 		}
 	}
 
+	if h.BlockHash == "" {
+		h.BlockHash = sebakcommon.MustMakeObjectHashString(h)
+	}
 }
 
 type ConsensusResult struct {

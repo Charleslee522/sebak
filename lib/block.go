@@ -4,18 +4,18 @@ import "boscoin.io/sebak/lib/common"
 
 type Block struct {
 	Header              *Header
-	Transactions        []*BlockTransaction
+	Transactions        []BlockTransaction
 	PrevConsensusResult *ConsensusResult
 }
 
-func NewBlock(height uint64, txs []*BlockTransaction, prevResult *ConsensusResult, prevTotalTxs uint64) *Block {
+func NewBlock(height uint64, txs []BlockTransaction, prevBlockHash string, prevResult *ConsensusResult, prevTotalTxs uint64) *Block {
 	p := Block{
-		Header:       NewHeader(height, prevResult, prevTotalTxs, uint64(len(txs)), getTransactionRoot(txs)),
+		Header:       NewHeader(height, prevBlockHash, prevResult, prevTotalTxs, uint64(len(txs)), getTransactionRoot(txs)),
 		Transactions: txs,
 	}
 	return &p
 }
 
-func getTransactionRoot(txs []*BlockTransaction) string {
+func getTransactionRoot(txs []BlockTransaction) string {
 	return sebakcommon.MustMakeObjectHashString(txs) // [TODO] make root
 }
