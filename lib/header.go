@@ -1,23 +1,25 @@
 package sebak
 
-import "time"
+import (
+	"time"
+)
 
 type Header struct {
 	Version             uint32
-	PrevBlockHash       string // [TODO] change to Hash or Uint256 type
-	TransactionsRoot    string // Merkle root of Txs
+	PrevBlockHash       string // [TODO] Uint256 type
+	TransactionsRoot    string // Merkle root of Txs [TODO] Uint256 type
 	Timestamp           time.Time
 	Height              uint64
 	TotalTxs            uint64
 	PrevConsensusResult *ConsensusResult
 
-	prevTotalTxs uint64
-	blockHash    string // or types.Uint256
-	// PrevConsensusResultHash types.Hash (TODO)
-	// ConsensusPayloadHash    types.Hash (TODO)
+	prevTotalTxs            uint64
+	blockHash               string // [TODO] Uint256 type
+	prevConsensusResultHash string // [TODO] Uint256 type
+	// ConsensusPayloadHash    Uint256
 	// ConsensusPayload        Payload  // or []byte
 	// StateRoot types.Hash    // MPT of state
-	// + smart contract fields (TODO)
+	// [TODO] + smart contract fields
 }
 
 func NewHeader(height uint64, prevResult *ConsensusResult, prevTotalTxs uint64, currentTxs uint64, txRoot string) *Header {
@@ -45,13 +47,9 @@ func (h *Header) fill() {
 		}
 	}
 
-	if h.TransactionsRoot == "" {
-		// [TODO] fill TransactionsRoot
-	}
-
 }
 
 type ConsensusResult struct {
-	BlockHash string // [TODO] change to Hash or Uint256 type
+	BlockHash string // [TODO] Uint256 type
 	Ballots   []*Ballot
 }
