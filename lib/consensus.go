@@ -11,6 +11,7 @@ type Consensus interface {
 	HasMessageByHash(string) bool
 	ReceiveMessage(sebakcommon.Message) (Ballot, error)
 	ReceiveBallot(Ballot) (VotingStateStaging, error)
+	ReceiveBlock(Block) (VotingStateStaging, error)
 
 	AddBallot(Ballot) error
 	CloseConsensus(Ballot) error

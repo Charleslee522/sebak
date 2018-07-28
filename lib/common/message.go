@@ -8,5 +8,4 @@ type Message interface {
 	IsWellFormed([]byte) error
 	Equal(Message) bool
 	Source() string
-	// Validate(sebakstorage.LevelDBBackend) error
 }

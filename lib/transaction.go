@@ -122,7 +122,7 @@ func (tx Transaction) GetType() string {
 }
 
 func (tx Transaction) Equal(m sebakcommon.Message) bool {
-	return tx.H.Hash == m.GetHash()
+	return tx.GetHash() == m.GetHash()
 }
 
 func (tx Transaction) IsValidCheckpoint(checkpoint string) bool {
