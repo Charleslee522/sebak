@@ -287,22 +287,15 @@ type BallotBoxes struct {
 
 	Results map[ /* `Message.GetHash()`*/ string]*VotingResult
 
-	WaitingBox  *BallotBox
-	VotingBox   *BallotBox
-	ReservedBox *BallotBox
-
 	Messages map[ /* `Message.GetHash()`*/ string]sebakcommon.Message
 	Sources  map[ /* `Message.Source()` */ string]string /* `Message.GetHash()`*/
 }
 
 func NewBallotBoxes() *BallotBoxes {
 	return &BallotBoxes{
-		Results:     map[string]*VotingResult{},
-		WaitingBox:  NewBallotBox(),
-		VotingBox:   NewBallotBox(),
-		ReservedBox: NewBallotBox(),
-		Messages:    map[string]sebakcommon.Message{},
-		Sources:     map[string]string{},
+		Results:  map[string]*VotingResult{},
+		Messages: map[string]sebakcommon.Message{},
+		Sources:  map[string]string{},
 	}
 }
 
@@ -338,14 +331,6 @@ func (b *BallotBoxes) IsVoted(ballot Ballot) bool {
 func (b *BallotBoxes) AddVotingResult(vr *VotingResult, ballot Ballot) (err error) {
 	b.Lock()
 	defer b.Unlock()
-
-	if ballot.CanFitInVotingBox() {
-		err = b.VotingBox.AddVotingResult(vr)
-	} else if ballot.CanFitInWaitingBox() {
-		err = b.WaitingBox.AddVotingResult(vr)
-	} else {
-		err = sebakerror.ErrorBallotHasInvalidState
-	}
 
 	if err == nil {
 		b.Results[vr.MessageHash] = vr
@@ -383,19 +368,7 @@ func (b *BallotBoxes) AddBallot(ballot Ballot) (isNew bool, err error) {
 			return
 		}
 
-		if err = vr.Add(ballot); err != nil {
-			return
-		}
-		if b.ReservedBox.HasMessageByHash(ballot.MessageHash()) {
-			if err = b.ReservedBox.RemoveVotingResult(vr); err != nil {
-				log.Error("ReservedBox has a message but cannot remove it", "MessageHash", ballot.MessageHash(), "error", err)
-			}
-
-			if err = b.AddVotingResult(vr, ballot); err != nil {
-				log.Warn("failed to add VotingResult", "MessageHash", ballot.MessageHash(), "error", err)
-				err = nil
-			}
-		}
+		err = vr.Add(ballot)
 		return
 	}
 
@@ -403,7 +376,6 @@ func (b *BallotBoxes) AddBallot(ballot Ballot) (isNew bool, err error) {
 		return
 	}
 
-	// unknown ballot will be in `WaitingBox`
 	if err = b.AddVotingResult(vr, ballot); err != nil {
 		log.Warn("failed to add VotingResult", "MessageHash", ballot.MessageHash(), "error", err)
 		err = nil
@@ -434,49 +406,4 @@ type BallotBox struct {
 	sebakcommon.SafeLock
 
 	Hashes map[string]bool // `Message.Hash`es
-}
-
-func NewBallotBox() *BallotBox {
-	return &BallotBox{Hashes: make(map[string]bool)}
-}
-
-func (b *BallotBox) Len() int {
-	return len(b.Hashes)
-}
-
-func (b *BallotBox) HasMessage(m sebakcommon.Message) bool {
-	return b.HasMessageByHash(m.GetHash())
-}
-
-func (b *BallotBox) HasMessageByHash(hash string) bool {
-	_, found := b.Hashes[hash]
-	return found
-}
-
-func (b *BallotBox) AddVotingResult(vr *VotingResult) (err error) {
-	if b.HasMessageByHash(vr.MessageHash) {
-		err = sebakerror.ErrorVotingResultAlreadyExists
-		return
-	}
-
-	b.Lock()
-	defer b.Unlock()
-
-	b.Hashes[vr.MessageHash] = true
-
-	return
-}
-
-func (b *BallotBox) RemoveVotingResult(vr *VotingResult) (err error) {
-	if !b.HasMessageByHash(vr.MessageHash) {
-		err = sebakerror.ErrorVotingResultNotFound
-		return
-	}
-
-	b.Lock()
-	defer b.Unlock()
-
-	delete(b.Hashes, vr.MessageHash)
-
-	return
 }

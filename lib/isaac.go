@@ -89,6 +89,10 @@ func (is *ISAAC) ReceiveBallot(ballot Ballot) (vs VotingStateStaging, err error)
 	return
 }
 
+func (is *ISAAC) ReceiveBlock(Block) (vs VotingStateStaging, err error) {
+	return
+}
+
 func (is *ISAAC) receiveBallotStateINIT(ballot Ballot) (vs VotingStateStaging, err error) {
 	var isNew bool
 
@@ -132,9 +136,7 @@ func (is *ISAAC) receiveBallotStateINIT(ballot Ballot) (vs VotingStateStaging, e
 			return
 		}
 
-		is.Boxes.WaitingBox.RemoveVotingResult(vr) // TODO detect error
 		if !vs.IsClosed() {
-			is.Boxes.VotingBox.AddVotingResult(vr) // TODO detect error
 			is.Boxes.AddSource(ballot)
 		}
 	}
@@ -168,10 +170,7 @@ func (is *ISAAC) CloseConsensus(ballot Ballot) (err error) {
 		return
 	}
 
-	is.Boxes.WaitingBox.RemoveVotingResult(vr)  // TODO detect error
-	is.Boxes.VotingBox.RemoveVotingResult(vr)   // TODO detect error
-	is.Boxes.ReservedBox.RemoveVotingResult(vr) // TODO detect error
-	is.Boxes.RemoveVotingResult(vr)             // TODO detect error
+	is.Boxes.RemoveVotingResult(vr) // TODO detect error
 
 	return
 }
@@ -181,7 +180,7 @@ func (is *ISAAC) receiveBallotVotingStates(ballot Ballot) (vs VotingStateStaging
 		return
 	}
 
-	if !is.Boxes.VotingBox.HasMessageByHash(ballot.MessageHash()) {
+	if !is.Boxes.HasMessageByHash(ballot.MessageHash()) {
 		is.Boxes.AddSource(ballot)
 	}
 

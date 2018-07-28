@@ -271,10 +271,10 @@ func TestNodeRunnerConsensusSameSourceWillNotIgnored(t *testing.T) {
 		return
 	}
 
-	if !isaac.Boxes.WaitingBox.HasMessage(firstTx) {
-		t.Error("ballot not in WaitingBox")
-		return
-	}
+	// if !isaac.Boxes.WaitingBox.HasMessage(firstTx) {
+	// 	t.Error("ballot not in WaitingBox")
+	// 	return
+	// }
 
 	var lastVotingStateStaging []VotingStateStaging
 	var deferFunc sebakcommon.CheckerDeferFunc = func(n int, c sebakcommon.Checker, err error) {
