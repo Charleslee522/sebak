@@ -1,22 +1,32 @@
 package sebak
 
 import (
+	"encoding/json"
+
 	"boscoin.io/sebak/lib/common"
 	"boscoin.io/sebak/lib/storage"
 )
 
 type Block struct {
-	Header              *Header
+	Header              Header
 	Transactions        []BlockTransaction
-	PrevConsensusResult *ConsensusResult
+	PrevConsensusResult ConsensusResult
 }
 
-func NewBlock(height uint64, txs []BlockTransaction, prevBlockHash string, prevResult *ConsensusResult, prevTotalTxs uint64) *Block {
+func NewBlock(height uint64, txs []BlockTransaction, prevBlockHash string, prevResult ConsensusResult, prevTotalTxs uint64) *Block {
 	p := Block{
-		Header:       NewHeader(height, prevBlockHash, prevResult, prevTotalTxs, uint64(len(txs)), getTransactionRoot(txs)),
+		Header:       *NewHeader(height, prevBlockHash, prevResult, prevTotalTxs, uint64(len(txs)), getTransactionRoot(txs)),
 		Transactions: txs,
 	}
 	return &p
+}
+
+func NewBlockFromJSON(input []byte) (b Block, err error) {
+	if err = json.Unmarshal(input, &b); err != nil {
+		return
+	}
+
+	return
 }
 
 func getTransactionRoot(txs []BlockTransaction) string {

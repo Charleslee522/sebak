@@ -13,10 +13,10 @@ type Header struct {
 	Timestamp           time.Time
 	Height              uint64
 	TotalTxs            uint64
-	PrevConsensusResult *ConsensusResult
+	PrevConsensusResult ConsensusResult
 
-	prevTotalTxs            uint64
 	BlockHash               string // [TODO] Uint256 type
+	prevTotalTxs            uint64
 	prevConsensusResultHash string // [TODO] Uint256 type
 	// ConsensusPayloadHash    Uint256
 	// ConsensusPayload        Payload  // or []byte
@@ -24,7 +24,7 @@ type Header struct {
 	// [TODO] + smart contract fields
 }
 
-func NewHeader(height uint64, prevBlockHash string, prevResult *ConsensusResult, prevTotalTxs uint64, currentTxs uint64, txRoot string) *Header {
+func NewHeader(height uint64, prevBlockHash string, prevResult ConsensusResult, prevTotalTxs uint64, currentTxs uint64, txRoot string) *Header {
 	p := Header{
 		PrevBlockHash:       prevBlockHash,
 		Timestamp:           time.Now(),
@@ -45,7 +45,7 @@ func (h *Header) fill() {
 
 	if h.PrevBlockHash == "" {
 		if h.Height != 0 &&
-			h.PrevConsensusResult != nil {
+			h.PrevConsensusResult.BlockHash != "" {
 			h.PrevBlockHash = h.PrevConsensusResult.BlockHash
 		}
 	}

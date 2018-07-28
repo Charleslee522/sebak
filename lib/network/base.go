@@ -72,7 +72,6 @@ const (
 type Message struct {
 	Type MessageType
 	Data []byte
-	//DataString string // optional
 }
 
 func (t Message) String() string {

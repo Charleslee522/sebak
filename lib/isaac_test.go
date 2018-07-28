@@ -88,11 +88,11 @@ func TestNewISAAC(t *testing.T) {
 	policy, _ := NewDefaultVotingThresholdPolicy(100, 30, 30)
 	policy.SetValidators(1)
 
-	is, err := NewISAAC(networkID, NewRandomNode(), policy)
-	if err != nil {
-		t.Errorf("`NewISAAC` must not be failed: %v", err)
-		return
-	}
+	// is, err := NewISAAC(networkID, NewRandomNode(), policy)
+	// if err != nil {
+	// 	t.Errorf("`NewISAAC` must not be failed: %v", err)
+	// 	return
+	// }
 
 	// check BallotBox is empty
 	// if is.Boxes.WaitingBox.Len() > 0 {

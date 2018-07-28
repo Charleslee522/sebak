@@ -100,23 +100,6 @@ func (b Ballot) String() string {
 	return string(encoded)
 }
 
-func (b Ballot) CanFitInVotingBox() (ret bool) {
-	switch b.State() {
-	case sebakcommon.BallotStateSIGN:
-		ret = true
-	case sebakcommon.BallotStateACCEPT:
-		ret = true
-	default:
-		ret = false
-	}
-
-	return
-}
-
-func (b Ballot) CanFitInWaitingBox() bool {
-	return b.State() == sebakcommon.BallotStateINIT
-}
-
 // NewBallotFromMessage creates `Ballot` from `Message`. It needs to be
 // `Ballot.IsWellFormed()` and `Ballot.Validate()`.
 func NewBallotFromMessage(nodeKey string, m sebakcommon.Message) (ballot Ballot, err error) {
