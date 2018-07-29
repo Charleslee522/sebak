@@ -59,53 +59,23 @@ func (is *ISAAC) PutMessage(m sebakcommon.Message) (err error) {
 	return
 }
 
-// func (is *ISAAC) GenerateBlock(txs []Transaction) *Block {
-// 	return NewBlock(0, txs, "", ConsensusResult{}, 0)
-// }
+func (is *ISAAC) generateBlock(txs []Transaction) *Block { // [TODO] generate block from the previous block information
+	return NewBlock(0, txs, "", ConsensusResult{}, 0)
+}
 
-// func (is *ISAAC) GetBallot() (ballot Ballot, err error) {
-// 	var txs []Transaction
-// 	for hash, msg := range is.MsgPool.Messages {
-// 		var tx Transaction
-// 		data, _ := msg.Serialize()
-// 		if tx, err = NewTransactionFromJSON(data); err != nil {
-// 			continue
-// 		}
-// 		txs = append(txs, tx)
-// 	}
-
-// 	block := is.GenerateBlock(txs)
-// 	if ballot, err = NewBallotFromBlock(is.Node.Address(), block); err != nil {
-// 		return
-// 	}
-
-// 	// self-sign; make new `Ballot` from `Message`
-// 	ballot.SetState(sebakcommon.BallotStateINIT)
-// 	ballot.Vote(VotingYES) // The initial ballot from client will have 'VotingYES'
-// 	ballot.Sign(is.Node.Keypair(), is.networkID)
-
-// 	if err = ballot.IsWellFormed(is.networkID); err != nil {
-// 		return
-// 	}
-
-// 	if _, err = is.Boxes.AddBallot(ballot); err != nil {
-// 		return
-// 	}
-
-// 	return
-// }
-
-func (is *ISAAC) ReceiveMessage(m sebakcommon.Message) (ballot Ballot, err error) {
-	if is.Boxes.HasMessage(m) {
-		err = sebakerror.ErrorNewButKnownMessage
-		return
+func (is *ISAAC) GetBallot() (ballot Ballot, err error) {
+	var txs []Transaction
+	for _, msg := range is.MsgPool.Messages {
+		var tx Transaction
+		data, _ := msg.Serialize()
+		if tx, err = NewTransactionFromJSON(data); err != nil {
+			continue
+		}
+		txs = append(txs, tx)
 	}
 
-	if err = is.PutMessage(m); err != nil {
-		return
-	}
-
-	if ballot, err = NewBallotFromMessage(is.Node.Address(), m); err != nil {
+	block := is.generateBlock(txs)
+	if ballot, err = NewBallotFromMessage(is.Node.Address(), block); err != nil {
 		return
 	}
 
@@ -122,6 +92,10 @@ func (is *ISAAC) ReceiveMessage(m sebakcommon.Message) (ballot Ballot, err error
 		return
 	}
 
+	return
+}
+
+func (is *ISAAC) ReceiveMessage(m sebakcommon.Message) (ballot Ballot, err error) {
 	return
 }
 
