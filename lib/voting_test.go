@@ -66,7 +66,7 @@ func TestVotingResultCheckThreshold(t *testing.T) {
 		vr.Add(ballot)
 	}
 
-	policy, _ := NewDefaultVotingThresholdPolicy(100, 100, 100)
+	policy, _ := NewDefaultVotingThresholdPolicy(1, 100, 100)
 	policy.SetValidators(numberOfBallots)
 	if _, ended := vr.CheckThreshold(sebakcommon.BallotStateNONE, policy); ended {
 		t.Error("`BallotStateNONE` must be `false`")
@@ -76,7 +76,7 @@ func TestVotingResultCheckThreshold(t *testing.T) {
 		t.Error("`BallotStateINIT` must be `true`")
 		return
 	}
-	policy, _ = NewDefaultVotingThresholdPolicy(100, 100, 100)
+	policy, _ = NewDefaultVotingThresholdPolicy(1, 100, 100)
 	policy.SetConnected(numberOfBallots * 2)
 	if _, ended := vr.CheckThreshold(sebakcommon.BallotStateINIT, policy); ended {
 		t.Error("`BallotStateINIT` must be `false`")
@@ -94,7 +94,7 @@ func TestVotingResultGetResult(t *testing.T) {
 	}
 
 	{
-		policy, _ := NewDefaultVotingThresholdPolicy(100, 30, 30)
+		policy, _ := NewDefaultVotingThresholdPolicy(1, 30, 30)
 		policy.SetConnected(numberOfBallots - 1)
 
 		_, state, ended := vr.MakeResult(policy)
@@ -114,7 +114,7 @@ func TestVotingResultGetResult(t *testing.T) {
 
 	{
 		// too high threshold
-		policy, _ := NewDefaultVotingThresholdPolicy(100, 50, 50)
+		policy, _ := NewDefaultVotingThresholdPolicy(1, 50, 50)
 		policy.SetConnected(numberOfBallots + 100)
 
 		_, state, ended := vr.MakeResult(policy)
@@ -152,7 +152,7 @@ func TestVotingResultGetResultHigherStateMustBePicked(t *testing.T) {
 	}
 
 	{
-		policy, _ := NewDefaultVotingThresholdPolicy(100, 50, 50)
+		policy, _ := NewDefaultVotingThresholdPolicy(1, 50, 50)
 		policy.SetValidators(numberOfBallots)
 
 		_, state, ended := vr.MakeResult(policy)

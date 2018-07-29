@@ -267,7 +267,7 @@ func runNode() {
 
 	signTh, err := strconv.Atoi(flagSignThreshold)
 	acceptTh, err := strconv.Atoi(flagAcceptThreshold)
-	policy, _ := sebak.NewDefaultVotingThresholdPolicy(100, signTh, acceptTh)
+	policy, _ := sebak.NewDefaultVotingThresholdPolicy(1, signTh, acceptTh)
 	policy.SetValidators(len(localNode.GetValidators()) + 1) // including 'self'
 
 	isaac, err := sebak.NewISAAC([]byte(flagNetworkID), localNode, policy)

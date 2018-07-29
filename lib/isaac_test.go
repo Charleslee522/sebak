@@ -77,7 +77,7 @@ func NewBlockBallot() (Ballot, *Block) {
 }
 
 func makeISAAC(minimumValidators int) *ISAAC {
-	policy, _ := NewDefaultVotingThresholdPolicy(100, 30, 30)
+	policy, _ := NewDefaultVotingThresholdPolicy(1, 30, 30)
 	policy.SetValidators(minimumValidators)
 
 	is, _ := NewISAAC(networkID, NewRandomNode(), policy)
@@ -95,7 +95,7 @@ func makeBallot(kp *keypair.Full, m sebakcommon.Message, state sebakcommon.Ballo
 }
 
 func TestNewISAAC(t *testing.T) {
-	policy, _ := NewDefaultVotingThresholdPolicy(100, 30, 30)
+	policy, _ := NewDefaultVotingThresholdPolicy(1, 30, 30)
 	policy.SetValidators(1)
 
 	is, err := NewISAAC(networkID, NewRandomNode(), policy)
@@ -420,8 +420,9 @@ func TestISAACReceiveSameBallotStates(t *testing.T) {
 
 	ballot, _ := NewBlockBallot()
 
-	_, err := is.ReceiveBallot(ballot)
+	vs, err := is.ReceiveBallot(ballot)
 	assert.Nil(t, err)
+	assert.Equal(t, sebakcommon.BallotStateSIGN, vs.State)
 
 	m := NewDummyMessage(sebakcommon.GenerateUUID())
 
@@ -442,9 +443,6 @@ func TestISAACReceiveSameBallotStates(t *testing.T) {
 			return
 		}
 
-		// if is.Boxes.WaitingBox.HasMessageByHash(ballots[0].MessageHash()) {
-		// 	t.Error("after `INIT`, the ballot must move to `VotingBox`")
-		// }
 		if vs.IsEmpty() {
 			t.Error("failed to get result")
 			return

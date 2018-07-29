@@ -132,7 +132,7 @@ func createNodeRunners(n int) []*NodeRunner {
 	var nodeRunners []*NodeRunner
 	for i := 0; i < n; i++ {
 		v := nodes[i]
-		p, _ := NewDefaultVotingThresholdPolicy(100, 30, 30)
+		p, _ := NewDefaultVotingThresholdPolicy(1, 30, 30)
 		p.SetValidators(len(v.GetValidators()) + 1)
 		is, _ := NewISAAC(networkID, v, p)
 		st, _ := sebakstorage.NewTestMemoryLevelDBBackend()

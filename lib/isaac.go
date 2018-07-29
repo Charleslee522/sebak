@@ -141,15 +141,17 @@ func (is *ISAAC) receiveBallotStateINIT(ballot Ballot) (vs VotingStateStaging, e
 		if err = newBallot.IsWellFormed(is.networkID); err != nil {
 			return
 		}
-		encoded, _ := newBallot.D.Serialize()
-		var b Block
-		b, err = NewBlockFromJSON(encoded)
-
-		is.ThisRoundBlock = &b
-
-		// if _, err = is.Boxes.AddBallot(newBallot); err != nil {
+		// encoded, _ := newBallot.D.Serialize() [TODO] Deserialization
+		// var b Block
+		// if b, err = NewBlockFromJSON(encoded); err != nil {
 		// 	return
 		// }
+
+		// is.ThisRoundBlock = &b
+
+		if _, err = is.Boxes.AddBallot(newBallot); err != nil {
+			return
+		}
 	}
 
 	vr, err := is.Boxes.VotingResult(ballot)
