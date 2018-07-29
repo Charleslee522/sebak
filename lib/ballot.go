@@ -271,6 +271,9 @@ type BallotBoxes struct {
 	Results  map[ /* `Message.GetHash()`*/ string]*VotingResult
 	Messages map[ /* `Message.GetHash()`*/ string]sebakcommon.Message
 	Sources  map[ /* `Message.Source()` */ string]string /* `Message.GetHash()`*/
+
+	MsgPool        *MessagePool
+	ThisRoundBlock *Block
 }
 
 func NewBallotBoxes() *BallotBoxes {
@@ -278,6 +281,7 @@ func NewBallotBoxes() *BallotBoxes {
 		Results:  map[string]*VotingResult{},
 		Messages: map[string]sebakcommon.Message{},
 		Sources:  map[string]string{},
+		MsgPool:  NewMessagePool(),
 	}
 }
 

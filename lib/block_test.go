@@ -76,10 +76,6 @@ func TestMultipleBlocks(t *testing.T) {
 3.2 []Non-proposer는 이번 proposer가 누군지 확인한 후, 그에게 다음 블록을 받기를 기다린다.
 */
 
-// Consensus entry point(pull. not push)
-
-// Block Propose Message
-
 // Selelct Proposer
 
 // Block and Proposer into Isaac(Testcase)

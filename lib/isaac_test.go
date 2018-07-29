@@ -105,7 +105,7 @@ func TestNewISAAC(t *testing.T) {
 	}
 
 	// check BallotBox is empty
-	if !is.MsgPool.IsEmpty() {
+	if !is.Boxes.MsgPool.IsEmpty() {
 		t.Error("`MessagePool` must be empty")
 	}
 }
@@ -121,7 +121,7 @@ func TestISAACNewIncomingMessage(t *testing.T) {
 			return
 		}
 
-		if !is.MsgPool.HasMessage(m) {
+		if !is.Boxes.MsgPool.HasMessage(m) {
 			t.Error("failed to add message into MessagePool")
 			return
 		}
@@ -145,7 +145,7 @@ func TestISAACNewIncomingMessage(t *testing.T) {
 			return
 		}
 
-		if !is.MsgPool.HasMessage(m) {
+		if !is.Boxes.MsgPool.HasMessage(m) {
 			t.Error("failed to add message into MessagePool")
 			return
 		}
@@ -162,12 +162,12 @@ func TestISAACReceiveBallotStateINIT(t *testing.T) {
 		return
 	}
 
-	if is.ThisRoundBlock == nil {
+	if is.Boxes.ThisRoundBlock == nil {
 		t.Error("Block from the received ballot is nil")
 		return
 	}
 
-	assert.Equal(t, block.BlockHash, is.ThisRoundBlock.BlockHash)
+	assert.Equal(t, block.BlockHash, is.Boxes.ThisRoundBlock.BlockHash)
 }
 
 func TestISAACIsVoted(t *testing.T) {

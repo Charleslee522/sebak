@@ -13,9 +13,7 @@ type ISAAC struct {
 	Node                  *sebaknode.LocalNode
 	VotingThresholdPolicy sebakcommon.VotingThresholdPolicy
 
-	Boxes          *BallotBoxes
-	MsgPool        *MessagePool
-	ThisRoundBlock *Block
+	Boxes *BallotBoxes
 }
 
 func NewISAAC(networkID []byte, node *sebaknode.LocalNode, votingThresholdPolicy sebakcommon.VotingThresholdPolicy) (is *ISAAC, err error) {
@@ -23,8 +21,7 @@ func NewISAAC(networkID []byte, node *sebaknode.LocalNode, votingThresholdPolicy
 		networkID: networkID,
 		Node:      node,
 		VotingThresholdPolicy: votingThresholdPolicy,
-		Boxes:   NewBallotBoxes(),
-		MsgPool: NewMessagePool(),
+		Boxes: NewBallotBoxes(),
 	}
 
 	return
@@ -47,16 +44,7 @@ func (is *ISAAC) HasMessageByHash(h string) bool {
 }
 
 func (is *ISAAC) PutMessage(m sebakcommon.Message) (err error) {
-	/*
-		Previously the new incoming Message must be checked,
-			- TODO `Message` must be saved in `BlockTransactionHistory`
-			- TODO check already in BlockTransaction
-			- TODO check already in BlockTransactionHistory
-	*/
-
-	if err = is.MsgPool.AddMessage(m); err != nil {
-		return
-	}
+	err = is.Boxes.MsgPool.AddMessage(m)
 	return
 }
 
@@ -66,7 +54,7 @@ func (is *ISAAC) generateBlock(txs []Transaction) *Block { // [TODO] generate bl
 
 func (is *ISAAC) GetBallot() (ballot Ballot, err error) {
 	var txs []Transaction
-	for _, msg := range is.MsgPool.Messages {
+	for _, msg := range is.Boxes.MsgPool.Messages {
 		var tx Transaction
 		data, _ := msg.Serialize()
 		if tx, err = NewTransactionFromJSON(data); err != nil {
@@ -118,7 +106,7 @@ func (is *ISAAC) ReceiveBlock(Block) (vs VotingStateStaging, err error) {
 }
 
 func (is *ISAAC) receiveBallotStateINIT(ballot Ballot) (vs VotingStateStaging, err error) {
-	// [TODO] Checking the ballot sender is the Proposer of this round
+	// [TODO] Checking the ballot sender is a proposer of this round
 
 	var isNew bool
 
@@ -141,7 +129,7 @@ func (is *ISAAC) receiveBallotStateINIT(ballot Ballot) (vs VotingStateStaging, e
 		if err = newBallot.IsWellFormed(is.networkID); err != nil {
 			return
 		}
-		// encoded, _ := newBallot.D.Serialize() [TODO] Deserialization
+		// encoded, _ := newBallot.D.Serialize() [TODO] Block Deserialization
 		// var b Block
 		// if b, err = NewBlockFromJSON(encoded); err != nil {
 		// 	return
