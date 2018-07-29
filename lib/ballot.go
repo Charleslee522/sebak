@@ -126,6 +126,30 @@ func NewBallotFromMessage(nodeKey string, m sebakcommon.Message) (ballot Ballot,
 	return
 }
 
+// func NewBallotFromMessages(nodeKey string, m []sebakcommon.Message) (ballot Ballot, err error) {
+// 	body := BallotBody{
+// 		Hash:       m.GetHash(),
+// 		NodeKey:    nodeKey,
+// 		State:      sebakcommon.BallotInitState,
+// 		VotingHole: VotingNOTYET,
+// 	}
+// 	data := BallotData{
+// 		Data: m,
+// 	}
+// 	ballot = Ballot{
+// 		T: "ballot",
+// 		H: BallotHeader{
+// 			Hash:      base58.Encode(body.MakeHash()),
+// 			Signature: "",
+// 			Source:    m.Source(),
+// 		},
+// 		B: body,
+// 		D: data,
+// 	}
+
+// 	return
+// }
+
 func NewBallotFromJSON(b []byte) (ballot Ballot, err error) {
 	if err = json.Unmarshal(b, &ballot); err != nil {
 		return
@@ -268,8 +292,7 @@ func (bb BallotBody) MakeHash() []byte {
 type BallotBoxes struct {
 	sebakcommon.SafeLock
 
-	Results map[ /* `Message.GetHash()`*/ string]*VotingResult
-
+	Results  map[ /* `Message.GetHash()`*/ string]*VotingResult
 	Messages map[ /* `Message.GetHash()`*/ string]sebakcommon.Message
 	Sources  map[ /* `Message.Source()` */ string]string /* `Message.GetHash()`*/
 }

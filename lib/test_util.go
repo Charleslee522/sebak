@@ -69,12 +69,10 @@ func TestMakeOperation(amount int, addressList ...string) Operation {
 	return op
 }
 
-func TestMakeBlockTransactions(networkID []byte, nTransactions int) (bts []BlockTransaction) {
+func TestMakeTransactions(networkID []byte, nTransactions int) (txs []Transaction) {
 	for i := 0; i < nTransactions; i++ {
 		_, tx := TestMakeTransaction(networkID, 1)
-		encoded, _ := tx.Serialize()
-		bt := NewBlockTransactionFromTransaction(tx, encoded)
-		bts = append(bts, bt)
+		txs = append(txs, tx)
 	}
 	return
 }

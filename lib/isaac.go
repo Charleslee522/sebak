@@ -13,7 +13,8 @@ type ISAAC struct {
 	Node                  *sebaknode.LocalNode
 	VotingThresholdPolicy sebakcommon.VotingThresholdPolicy
 
-	Boxes *BallotBoxes
+	Boxes   *BallotBoxes
+	MsgPool *MessagePool
 }
 
 func NewISAAC(networkID []byte, node *sebaknode.LocalNode, votingThresholdPolicy sebakcommon.VotingThresholdPolicy) (is *ISAAC, err error) {
@@ -21,7 +22,8 @@ func NewISAAC(networkID []byte, node *sebaknode.LocalNode, votingThresholdPolicy
 		networkID: networkID,
 		Node:      node,
 		VotingThresholdPolicy: votingThresholdPolicy,
-		Boxes: NewBallotBoxes(),
+		Boxes:   NewBallotBoxes(),
+		MsgPool: NewMessagePool(),
 	}
 
 	return
@@ -43,7 +45,7 @@ func (is *ISAAC) HasMessageByHash(h string) bool {
 	return is.Boxes.HasMessageByHash(h)
 }
 
-func (is *ISAAC) ReceiveMessage(m sebakcommon.Message) (ballot Ballot, err error) {
+func (is *ISAAC) PutMessage(m sebakcommon.Message) (err error) {
 	/*
 		Previously the new incoming Message must be checked,
 			- TODO `Message` must be saved in `BlockTransactionHistory`
@@ -51,8 +53,55 @@ func (is *ISAAC) ReceiveMessage(m sebakcommon.Message) (ballot Ballot, err error
 			- TODO check already in BlockTransactionHistory
 	*/
 
+	if err = is.MsgPool.AddMessage(m); err != nil {
+		return
+	}
+	return
+}
+
+// func (is *ISAAC) GenerateBlock(txs []Transaction) *Block {
+// 	return NewBlock(0, txs, "", ConsensusResult{}, 0)
+// }
+
+// func (is *ISAAC) GetBallot() (ballot Ballot, err error) {
+// 	var txs []Transaction
+// 	for hash, msg := range is.MsgPool.Messages {
+// 		var tx Transaction
+// 		data, _ := msg.Serialize()
+// 		if tx, err = NewTransactionFromJSON(data); err != nil {
+// 			continue
+// 		}
+// 		txs = append(txs, tx)
+// 	}
+
+// 	block := is.GenerateBlock(txs)
+// 	if ballot, err = NewBallotFromBlock(is.Node.Address(), block); err != nil {
+// 		return
+// 	}
+
+// 	// self-sign; make new `Ballot` from `Message`
+// 	ballot.SetState(sebakcommon.BallotStateINIT)
+// 	ballot.Vote(VotingYES) // The initial ballot from client will have 'VotingYES'
+// 	ballot.Sign(is.Node.Keypair(), is.networkID)
+
+// 	if err = ballot.IsWellFormed(is.networkID); err != nil {
+// 		return
+// 	}
+
+// 	if _, err = is.Boxes.AddBallot(ballot); err != nil {
+// 		return
+// 	}
+
+// 	return
+// }
+
+func (is *ISAAC) ReceiveMessage(m sebakcommon.Message) (ballot Ballot, err error) {
 	if is.Boxes.HasMessage(m) {
 		err = sebakerror.ErrorNewButKnownMessage
+		return
+	}
+
+	if err = is.PutMessage(m); err != nil {
 		return
 	}
 

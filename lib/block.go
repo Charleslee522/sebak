@@ -8,12 +8,12 @@ import (
 )
 
 type Block struct {
-	Header              Header
-	Transactions        []BlockTransaction
+	Header
+	Transactions        []Transaction
 	PrevConsensusResult ConsensusResult
 }
 
-func NewBlock(height uint64, txs []BlockTransaction, prevBlockHash string, prevResult ConsensusResult, prevTotalTxs uint64) *Block {
+func NewBlock(height uint64, txs []Transaction, prevBlockHash string, prevResult ConsensusResult, prevTotalTxs uint64) *Block {
 	p := Block{
 		Header:       *NewHeader(height, prevBlockHash, prevResult, prevTotalTxs, uint64(len(txs)), getTransactionRoot(txs)),
 		Transactions: txs,
@@ -29,7 +29,7 @@ func NewBlockFromJSON(input []byte) (b Block, err error) {
 	return
 }
 
-func getTransactionRoot(txs []BlockTransaction) string {
+func getTransactionRoot(txs []Transaction) string {
 	return sebakcommon.MustMakeObjectHashString(txs) // [TODO] make root
 }
 
