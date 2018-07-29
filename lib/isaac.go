@@ -13,8 +13,9 @@ type ISAAC struct {
 	Node                  *sebaknode.LocalNode
 	VotingThresholdPolicy sebakcommon.VotingThresholdPolicy
 
-	Boxes   *BallotBoxes
-	MsgPool *MessagePool
+	Boxes          *BallotBoxes
+	MsgPool        *MessagePool
+	ThisRoundBlock *Block
 }
 
 func NewISAAC(networkID []byte, node *sebaknode.LocalNode, votingThresholdPolicy sebakcommon.VotingThresholdPolicy) (is *ISAAC, err error) {
@@ -117,6 +118,8 @@ func (is *ISAAC) ReceiveBlock(Block) (vs VotingStateStaging, err error) {
 }
 
 func (is *ISAAC) receiveBallotStateINIT(ballot Ballot) (vs VotingStateStaging, err error) {
+	// [TODO] Checking the ballot sender is the Proposer of this round
+
 	var isNew bool
 
 	if isNew, err = is.Boxes.AddBallot(ballot); err != nil {
@@ -138,10 +141,15 @@ func (is *ISAAC) receiveBallotStateINIT(ballot Ballot) (vs VotingStateStaging, e
 		if err = newBallot.IsWellFormed(is.networkID); err != nil {
 			return
 		}
+		encoded, _ := newBallot.D.Serialize()
+		var b Block
+		b, err = NewBlockFromJSON(encoded)
 
-		if _, err = is.Boxes.AddBallot(newBallot); err != nil {
-			return
-		}
+		is.ThisRoundBlock = &b
+
+		// if _, err = is.Boxes.AddBallot(newBallot); err != nil {
+		// 	return
+		// }
 	}
 
 	vr, err := is.Boxes.VotingResult(ballot)

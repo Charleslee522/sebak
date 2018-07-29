@@ -60,7 +60,8 @@ func (b *Block) Equal(m sebakcommon.Message) bool {
 }
 
 func (b *Block) Source() string {
-	panic("The block doesn't have the source")
+	// [TODO] Could block have the Source?
+	return ""
 }
 
 func (b *Block) Save(st *sebakstorage.LevelDBBackend) (err error) {

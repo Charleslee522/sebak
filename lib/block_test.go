@@ -67,10 +67,10 @@ func TestMultipleBlocks(t *testing.T) {
 
 // Transaction
 /*
-1. [o]클라이언트가 서버에 메시지를 보냄
-2.1 [o]서버는 받은 메시지를 메시지 풀에 저장
-2.2 [o]서버는 메시지 풀로 block을 만듦
-2.3 []서버는 block으로 ballot을 만듦
+1. [O]클라이언트가 서버에 메시지를 보냄
+2.1 [O]서버는 받은 메시지를 메시지 풀에 저장
+2.2 [O]서버는 메시지 풀로 block을 만듦
+2.3 [O]서버는 block으로 ballot을 만듦
 3. []`특정 시간(블록 생성 주기)`이 되면,
 3.1 []Proposer는 거래를 묶어다가 블록에 넣어서 propose한다.
 3.2 []Non-proposer는 이번 proposer가 누군지 확인한 후, 그에게 다음 블록을 받기를 기다린다.

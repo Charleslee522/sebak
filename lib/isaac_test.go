@@ -7,6 +7,7 @@ import (
 
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/stellar/go/keypair"
+	"github.com/stretchr/testify/assert"
 
 	"boscoin.io/sebak/lib/common"
 	"boscoin.io/sebak/lib/error"
@@ -66,6 +67,15 @@ func (m DummyMessage) String() string {
 	return string(s)
 }
 
+func NewBlockBallot() (Ballot, *Block) {
+	txs := TestMakeTransactions(networkID, 10)
+	block := NewBlock(0, txs, "", ConsensusResult{}, 0)
+
+	kp, _ := keypair.Random()
+	ballot := makeBallot(kp, block, sebakcommon.BallotStateINIT)
+	return ballot, block
+}
+
 func makeISAAC(minimumValidators int) *ISAAC {
 	policy, _ := NewDefaultVotingThresholdPolicy(100, 30, 30)
 	policy.SetValidators(minimumValidators)
@@ -106,8 +116,7 @@ func TestISAACNewIncomingMessage(t *testing.T) {
 	m := NewDummyMessage(sebakcommon.GenerateUUID())
 
 	{
-		var err error
-		if _, err = is.ReceiveMessage(m); err != nil {
+		if err := is.PutMessage(m); err != nil {
 			t.Error(err)
 			return
 		}
@@ -120,24 +129,17 @@ func TestISAACNewIncomingMessage(t *testing.T) {
 
 	// receive same message
 	{
-		var err error
-		if _, err = is.ReceiveMessage(m); err != sebakerror.ErrorNewButKnownMessage {
+		if err := is.PutMessage(m); err != sebakerror.ErrorNewButKnownMessage {
 			t.Error("incoming known message must occurr `ErrorNewButKnownMessage`")
-			return
-		}
-		if !is.Boxes.HasMessage(m) {
-			t.Error("failed to find message")
 			return
 		}
 	}
 
 	// send another message
 	{
-		var err error
-
 		another := NewDummyMessage(sebakcommon.GenerateUUID())
 
-		_, err = is.ReceiveMessage(another)
+		err := is.PutMessage(another)
 		if err != nil {
 			t.Errorf("failed to add another message: %v", err)
 			return
@@ -147,31 +149,25 @@ func TestISAACNewIncomingMessage(t *testing.T) {
 			t.Error("failed to add message into MessagePool")
 			return
 		}
-
-		if !is.Boxes.HasMessage(another) {
-			t.Error("failed to find message")
-			return
-		}
 	}
 }
 
 func TestISAACReceiveBallotStateINIT(t *testing.T) {
 	is := makeISAAC(1)
-	m := NewDummyMessage(sebakcommon.GenerateUUID())
+	ballot, block := NewBlockBallot()
 
-	kp, _ := keypair.Random()
-	ballot := makeBallot(kp, m, sebakcommon.BallotStateINIT)
-
-	// new ballot from another node
+	// new ballot from the other node
 	if _, err := is.ReceiveBallot(ballot); err != nil {
 		t.Error(err)
 		return
 	}
 
-	if !is.Boxes.IsVoted(ballot) {
-		t.Error("failed to vote")
+	if is.ThisRoundBlock == nil {
+		t.Error("Block from the received ballot is nil")
 		return
 	}
+
+	assert.Equal(t, block.BlockHash, is.ThisRoundBlock.BlockHash)
 }
 
 func TestISAACIsVoted(t *testing.T) {
@@ -199,7 +195,21 @@ func TestISAACIsVoted(t *testing.T) {
 func TestISAACReceiveBallotStateINITAndMoveNextState(t *testing.T) {
 	is := makeISAAC(5)
 
-	var numberOfBallots int = 5
+	ballot, _ := NewBlockBallot()
+
+	if _, err := is.ReceiveBallot(ballot); err != nil {
+		t.Error(err)
+		return
+	}
+
+	// [TODO] Check `is` is Sign state
+
+}
+
+func TestISAACReceiveBallotStateSIGNAndMoveNextState(t *testing.T) {
+	is := makeISAAC(5)
+
+	var numberOfBallots = 5
 
 	m := NewDummyMessage(sebakcommon.GenerateUUID())
 
@@ -211,7 +221,7 @@ func TestISAACReceiveBallotStateINITAndMoveNextState(t *testing.T) {
 	for i := 0; i < int(numberOfBallots); i++ {
 		kp, _ := keypair.Random()
 
-		ballot := makeBallot(kp, m, sebakcommon.BallotStateINIT)
+		ballot := makeBallot(kp, m, sebakcommon.BallotStateSIGN)
 		ballots = append(ballots, ballot)
 
 		if vs, err = is.ReceiveBallot(ballot); err != nil {
@@ -244,10 +254,10 @@ func TestISAACReceiveBallotStateINITAndMoveNextState(t *testing.T) {
 	}
 }
 
-func TestISAACReceiveBallotStateINITAndVotingBox(t *testing.T) {
+func TestISAACReceiveBallotStateSIGNAndVotingBox(t *testing.T) {
 	is := makeISAAC(5)
 
-	var numberOfBallots int = 5
+	var numberOfBallots = 5
 
 	m := NewDummyMessage(sebakcommon.GenerateUUID())
 
@@ -258,7 +268,7 @@ func TestISAACReceiveBallotStateINITAndVotingBox(t *testing.T) {
 	for i := 0; i < int(numberOfBallots); i++ {
 		kp, _ := keypair.Random()
 
-		ballot := makeBallot(kp, m, sebakcommon.BallotStateINIT)
+		ballot := makeBallot(kp, m, sebakcommon.BallotStateSIGN)
 		ballots = append(ballots, ballot)
 
 		if vs, err = is.ReceiveBallot(ballot); err != nil {
@@ -312,7 +322,7 @@ func voteISAACReceiveBallot(is *ISAAC, ballots []Ballot, kps []*keypair.Full, st
 }
 
 func TestISAACReceiveBallotStateTransition(t *testing.T) {
-	var numberOfBallots int = 5
+	var numberOfBallots = 5
 	var minimumValidators = 3 // must be passed
 
 	is := makeISAAC(minimumValidators)
@@ -403,10 +413,15 @@ func TestISAACReceiveBallotStateTransition(t *testing.T) {
 }
 
 func TestISAACReceiveSameBallotStates(t *testing.T) {
-	var numberOfBallots int = 5
+	var numberOfBallots = 5
 	var minimumValidators = 3
 
 	is := makeISAAC(minimumValidators)
+
+	ballot, _ := NewBlockBallot()
+
+	_, err := is.ReceiveBallot(ballot)
+	assert.Nil(t, err)
 
 	m := NewDummyMessage(sebakcommon.GenerateUUID())
 
@@ -417,11 +432,11 @@ func TestISAACReceiveSameBallotStates(t *testing.T) {
 		kp, _ := keypair.Random()
 		kps = append(kps, kp)
 
-		ballots = append(ballots, makeBallot(kp, m, sebakcommon.BallotStateINIT))
+		ballots = append(ballots, makeBallot(kp, m, sebakcommon.BallotStateSIGN))
 	}
 
 	{
-		vs, err := voteISAACReceiveBallot(is, ballots, kps, sebakcommon.BallotStateINIT)
+		vs, err := voteISAACReceiveBallot(is, ballots, kps, sebakcommon.BallotStateSIGN)
 		if err != nil {
 			t.Error(err)
 			return
@@ -434,20 +449,17 @@ func TestISAACReceiveSameBallotStates(t *testing.T) {
 			t.Error("failed to get result")
 			return
 		}
-		if vs.State != sebakcommon.BallotStateSIGN {
-			err = errors.New("`VotingResult.State` must be `BallotStateSIGN`")
+		if vs.State != sebakcommon.BallotStateACCEPT {
+			err = errors.New("`VotingResult.State` must be `BallotStateACCEPT`")
 		}
 
 		vr, err := is.Boxes.VotingResult(ballots[0])
 		if err != nil {
 			t.Error(err)
 		}
-		if vr.VotedCount(sebakcommon.BallotStateINIT) != int(numberOfBallots)+1 {
-			t.Error("some ballot was not voted")
-			return
-		}
+		assert.Equal(t, int(numberOfBallots), vr.VotedCount(sebakcommon.BallotStateSIGN))
 
-		if vr.VotedCount(sebakcommon.BallotStateSIGN) != 0 || vr.VotedCount(sebakcommon.BallotStateACCEPT) != 0 || vr.VotedCount(sebakcommon.BallotStateALLCONFIRM) != 0 {
+		if vr.VotedCount(sebakcommon.BallotStateACCEPT) != 0 || vr.VotedCount(sebakcommon.BallotStateALLCONFIRM) != 0 {
 			t.Error("unexpected ballots found")
 			return
 		}
@@ -458,7 +470,7 @@ func TestISAACReceiveSameBallotStates(t *testing.T) {
 		t.Error(err)
 	}
 	{
-		_, err := voteISAACReceiveBallot(is, ballots, kps, sebakcommon.BallotStateINIT)
+		_, err := voteISAACReceiveBallot(is, ballots, kps, sebakcommon.BallotStateSIGN)
 		if err != nil {
 			t.Error(err)
 			return
@@ -468,12 +480,10 @@ func TestISAACReceiveSameBallotStates(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if vrSecond.VotedCount(sebakcommon.BallotStateINIT) != int(numberOfBallots)+1 {
-		t.Error("some ballot was not voted")
-		return
-	}
 
-	if vrSecond.VotedCount(sebakcommon.BallotStateSIGN) != 0 || vrSecond.VotedCount(sebakcommon.BallotStateACCEPT) != 0 || vrSecond.VotedCount(sebakcommon.BallotStateALLCONFIRM) != 0 {
+	assert.Equal(t, int(numberOfBallots), vrSecond.VotedCount(sebakcommon.BallotStateSIGN))
+
+	if vrSecond.VotedCount(sebakcommon.BallotStateACCEPT) != 0 || vrSecond.VotedCount(sebakcommon.BallotStateALLCONFIRM) != 0 {
 		t.Error("unexpected ballots found")
 		return
 	}
