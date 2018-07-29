@@ -11,7 +11,6 @@ import (
 )
 
 type BallotData struct {
-	//Hash    string      `json:"hash"`
 	Data interface{} `json:"data"` // if `BallotStateINIT` must have the original `Message`
 }
 
