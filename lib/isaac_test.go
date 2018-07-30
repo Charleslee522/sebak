@@ -197,13 +197,15 @@ func TestISAACReceiveBallotStateINITAndMoveNextState(t *testing.T) {
 
 	ballot, _ := NewBlockBallot()
 
-	if _, err := is.ReceiveBallot(ballot); err != nil {
+	if vs, err := is.ReceiveBallot(ballot); err != nil {
 		t.Error(err)
 		return
+	} else {
+		if vs.State != sebakcommon.BallotStateSIGN {
+			err = errors.New("`VotingResult.State` must be `BallotStateSIGN`")
+			return
+		}
 	}
-
-	// [TODO] Check `is` is Sign state
-
 }
 
 func TestISAACReceiveBallotStateSIGNAndMoveNextState(t *testing.T) {
