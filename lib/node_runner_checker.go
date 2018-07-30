@@ -63,6 +63,15 @@ func CheckNodeRunnerHandleMessageHistory(c sebakcommon.Checker, args ...interfac
 	return
 }
 
+func CheckNodeRunnerHandleMessageSaveTransactionIntoPool(c sebakcommon.Checker, args ...interface{}) (err error) {
+	checker := c.(*NodeRunnerHandleMessageChecker)
+
+	incomingTx := checker.Transaction
+
+	err = checker.NodeRunner.Consensus().PutMessage(incomingTx)
+	return
+}
+
 func CheckNodeRunnerHandleMessageISAACReceiveMessage(c sebakcommon.Checker, args ...interface{}) (err error) {
 	checker := c.(*NodeRunnerHandleMessageChecker)
 
@@ -92,6 +101,15 @@ func CheckNodeRunnerHandleMessageBroadcast(c sebakcommon.Checker, args ...interf
 
 	checker.NodeRunner.Log().Debug("ballot from client will be broadcasted", "ballot", checker.Ballot.MessageHash())
 	checker.NodeRunner.ConnectionManager().Broadcast(checker.Ballot)
+
+	return
+}
+
+func CheckNodeRunnerHandleTransactionBroadcast(c sebakcommon.Checker, args ...interface{}) (err error) {
+	checker := c.(*NodeRunnerHandleMessageChecker)
+
+	checker.NodeRunner.Log().Debug("ballot from client will be broadcasted", "ballot", checker.Ballot.MessageHash())
+	checker.NodeRunner.ConnectionManager().Broadcast(checker.Transaction)
 
 	return
 }

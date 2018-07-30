@@ -85,6 +85,14 @@ func (is *ISAAC) GetBallot() (ballot Ballot, err error) {
 }
 
 func (is *ISAAC) ReceiveMessage(m sebakcommon.Message) (ballot Ballot, err error) {
+	/*
+		Previously the new incoming Message must be checked,
+			- TODO `Message` must be saved in `BlockTransactionHistory`
+			- TODO check already in BlockTransaction
+			- TODO check already in BlockTransactionHistory
+	*/
+
+	err = is.PutMessage(m)
 	return
 }
 

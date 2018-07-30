@@ -22,6 +22,7 @@ func TestNodeRunnerConsensusStoreInHistoryIncomingTxMessage(t *testing.T) {
 	var handleMessageFromClientCheckerFuncs = []sebakcommon.CheckerFunc{
 		CheckNodeRunnerHandleMessageTransactionUnmarshal,
 		CheckNodeRunnerHandleMessageHistory,
+		CheckNodeRunnerHandleMessageSaveTransactionIntoPool,
 		func(c sebakcommon.Checker, args ...interface{}) error {
 			defer wg.Done()
 
