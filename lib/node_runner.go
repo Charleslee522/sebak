@@ -261,7 +261,7 @@ func (nr *NodeRunner) handleMessage() {
 				continue
 			}
 
-			nr.log.Debug("got transaction message`", "transaction", message.Head(50))
+			nr.log.Debug("got transaction message", "transaction", message.Head(50))
 
 			checker := &NodeRunnerHandleMessageChecker{
 				DefaultChecker: sebakcommon.DefaultChecker{nr.handleTransactionCheckerFunc},
@@ -271,7 +271,7 @@ func (nr *NodeRunner) handleMessage() {
 				Message:        message,
 			}
 
-			if err = sebakcommon.RunChecker(checker, nr.handleMessageFromClientCheckerDeferFunc); err != nil {
+			if err = sebakcommon.RunChecker(checker, nr.handleTransactionCheckerDeferFunc); err != nil {
 				if _, ok := err.(sebakcommon.CheckerErrorStop); ok {
 					continue
 				}

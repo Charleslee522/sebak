@@ -52,6 +52,7 @@ type NetworkClient interface {
 	GetNodeInfo() ([]byte, error)
 	SendMessage(sebakcommon.Serializable) ([]byte, error)
 	SendBallot(sebakcommon.Serializable) ([]byte, error)
+	SendTransaction(sebakcommon.Serializable) ([]byte, error)
 }
 
 type MessageType string

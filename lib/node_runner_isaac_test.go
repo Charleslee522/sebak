@@ -6,7 +6,102 @@ import (
 
 	"boscoin.io/sebak/lib/common"
 	"boscoin.io/sebak/lib/network"
+	"github.com/stretchr/testify/assert"
 )
+
+func TestNodeRunnerConsensusSaveTxIntoTxPool(t *testing.T) {
+	defer sebaknetwork.CleanUpMemoryNetwork()
+
+	numberOfNodes := 3
+	nodeRunners := createNodeRunnersWithReady(numberOfNodes)
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	var handleMessageFromClientCheckerFuncs = []sebakcommon.CheckerFunc{
+		CheckNodeRunnerHandleMessageTransactionUnmarshal,
+		CheckNodeRunnerHandleMessageSaveTransactionIntoPool,
+		func(c sebakcommon.Checker, args ...interface{}) error {
+			defer wg.Done()
+
+			return nil
+		},
+	}
+
+	for _, nr := range nodeRunners {
+		nr.SetHandleMessageFromClientCheckerFuncs(nil, handleMessageFromClientCheckerFuncs...)
+	}
+
+	nr0 := nodeRunners[0]
+
+	client := nr0.Network().GetClient(nr0.Node().Endpoint())
+	tx := makeTransaction(nr0.Node().Keypair())
+	client.SendMessage(tx)
+
+	wg.Wait()
+
+	isaac, ok := nr0.Consensus().(*ISAAC)
+
+	assert.True(t, ok)
+	assert.False(t, isaac.Boxes.MsgPool.IsEmpty())
+}
+
+func TestNodeRunnerConsensusBroadcastTx(t *testing.T) {
+	defer sebaknetwork.CleanUpMemoryNetwork()
+
+	numberOfNodes := 3
+	nodeRunners := createNodeRunnersWithReady(numberOfNodes)
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	var handleMessageFromClientCheckerFuncs = []sebakcommon.CheckerFunc{
+		CheckNodeRunnerHandleMessageTransactionUnmarshal,
+		CheckNodeRunnerHandleMessageSaveTransactionIntoPool,
+		CheckNodeRunnerHandleTransactionBroadcast,
+		func(c sebakcommon.Checker, args ...interface{}) error {
+			defer wg.Done()
+
+			return nil
+		},
+	}
+
+	var handleTransactionCheckerFuncs = []sebakcommon.CheckerFunc{
+		CheckNodeRunnerHandleMessageTransactionUnmarshal,
+		CheckNodeRunnerHandleMessageTransactionHasSameSource,
+		CheckNodeRunnerHandleMessageSaveTransactionIntoPool,
+		CheckNodeRunnerHandleTransactionBroadcast,
+		func(c sebakcommon.Checker, args ...interface{}) error {
+			defer wg.Done()
+
+			return nil
+		},
+	}
+
+	for _, nr := range nodeRunners {
+		nr.SetHandleMessageFromClientCheckerFuncs(nil, handleMessageFromClientCheckerFuncs...)
+		nr.SetHandleTransactionCheckerFuncs(nil, handleTransactionCheckerFuncs...)
+	}
+
+	nr0 := nodeRunners[0]
+	nr1 := nodeRunners[1]
+	nr2 := nodeRunners[2]
+
+	client := nr0.Network().GetClient(nr0.Node().Endpoint())
+	tx := makeTransaction(nr0.Node().Keypair())
+	client.SendMessage(tx)
+
+	wg.Wait()
+
+	isaac1, ok := nr1.Consensus().(*ISAAC)
+	assert.True(t, ok)
+	assert.False(t, isaac1.Boxes.MsgPool.IsEmpty())
+
+	isaac2, ok := nr2.Consensus().(*ISAAC)
+
+	assert.True(t, ok)
+	assert.False(t, isaac2.Boxes.MsgPool.IsEmpty())
+}
 
 // TestNodeRunnerConsensusStoreInHistoryIncomingTxMessage checks, the incoming tx message will be
 // saved in 'BlockTransactionHistory'.
@@ -22,7 +117,6 @@ func TestNodeRunnerConsensusStoreInHistoryIncomingTxMessage(t *testing.T) {
 	var handleMessageFromClientCheckerFuncs = []sebakcommon.CheckerFunc{
 		CheckNodeRunnerHandleMessageTransactionUnmarshal,
 		CheckNodeRunnerHandleMessageHistory,
-		CheckNodeRunnerHandleMessageSaveTransactionIntoPool,
 		func(c sebakcommon.Checker, args ...interface{}) error {
 			defer wg.Done()
 

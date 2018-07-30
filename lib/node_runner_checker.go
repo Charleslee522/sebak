@@ -100,7 +100,7 @@ func CheckNodeRunnerHandleMessageBroadcast(c sebakcommon.Checker, args ...interf
 	checker := c.(*NodeRunnerHandleMessageChecker)
 
 	checker.NodeRunner.Log().Debug("ballot from client will be broadcasted", "ballot", checker.Ballot.MessageHash())
-	checker.NodeRunner.ConnectionManager().Broadcast(checker.Ballot)
+	checker.NodeRunner.ConnectionManager().BroadcastBallot(checker.Ballot)
 
 	return
 }
@@ -108,8 +108,8 @@ func CheckNodeRunnerHandleMessageBroadcast(c sebakcommon.Checker, args ...interf
 func CheckNodeRunnerHandleTransactionBroadcast(c sebakcommon.Checker, args ...interface{}) (err error) {
 	checker := c.(*NodeRunnerHandleMessageChecker)
 
-	checker.NodeRunner.Log().Debug("ballot from client will be broadcasted", "ballot", checker.Ballot.MessageHash())
-	checker.NodeRunner.ConnectionManager().Broadcast(checker.Transaction)
+	checker.NodeRunner.Log().Debug("transaction from client will be broadcasted", "transaction", checker.Ballot.MessageHash())
+	checker.NodeRunner.ConnectionManager().BroadcastTransaction(checker.Transaction)
 
 	return
 }
@@ -355,7 +355,7 @@ func CheckNodeRunnerHandleBallotBroadcast(c sebakcommon.Checker, args ...interfa
 		"ballot", newBallot.MessageHash(),
 		"isNew", checker.IsNew,
 	)
-	checker.NodeRunner.ConnectionManager().Broadcast(newBallot)
+	checker.NodeRunner.ConnectionManager().BroadcastBallot(newBallot)
 
 	return
 }

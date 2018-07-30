@@ -171,11 +171,22 @@ func (c *ConnectionManager) ConnectionWatcher(t Network, conn net.Conn, state ht
 	return
 }
 
-func (c *ConnectionManager) Broadcast(message sebakcommon.Message) {
+func (c *ConnectionManager) BroadcastBallot(message sebakcommon.Message) {
 	for _, validator := range c.AllConnected() {
 		go func(v *sebaknode.Validator) {
 			client := c.GetConnection(v.Address())
 			if _, err := client.SendBallot(message); err != nil {
+				c.log.Error("failed to SendBallot", "error", err, "validator", v)
+			}
+		}(validator)
+	}
+}
+
+func (c *ConnectionManager) BroadcastTransaction(message sebakcommon.Message) {
+	for _, validator := range c.AllConnected() {
+		go func(v *sebaknode.Validator) {
+			client := c.GetConnection(v.Address())
+			if _, err := client.SendTransaction(message); err != nil {
 				c.log.Error("failed to SendBallot", "error", err, "validator", v)
 			}
 		}(validator)
