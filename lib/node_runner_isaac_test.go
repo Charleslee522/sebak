@@ -3,6 +3,7 @@ package sebak
 import (
 	"sync"
 	"testing"
+	"time"
 
 	"boscoin.io/sebak/lib/common"
 	"boscoin.io/sebak/lib/network"
@@ -71,11 +72,6 @@ func TestNodeRunnerConsensusBroadcastTx(t *testing.T) {
 		CheckNodeRunnerHandleMessageTransactionHasSameSource,
 		CheckNodeRunnerHandleMessageSaveTransactionIntoPool,
 		CheckNodeRunnerHandleTransactionBroadcast,
-		func(c sebakcommon.Checker, args ...interface{}) error {
-			defer wg.Done()
-
-			return nil
-		},
 	}
 
 	for _, nr := range nodeRunners {
@@ -92,6 +88,8 @@ func TestNodeRunnerConsensusBroadcastTx(t *testing.T) {
 	client.SendMessage(tx)
 
 	wg.Wait()
+
+	time.Sleep(100 * time.Millisecond)
 
 	isaac1, ok := nr1.Consensus().(*ISAAC)
 	assert.True(t, ok)
