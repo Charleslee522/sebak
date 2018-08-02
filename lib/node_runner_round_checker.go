@@ -401,8 +401,9 @@ func CheckNodeRunnerRoundHandleRoundBallotValidateTransactions(c sebakcommon.Che
 		return
 	}
 
-	// TODO check transactions are valid or not
-	// TODO check the proposed ValidTransactions is valid
+	if !checker.RoundBallot.IsAllTxsValid(checker.NetworkID) {
+
+	}
 
 	checker.VotingHole = VotingYES
 	return

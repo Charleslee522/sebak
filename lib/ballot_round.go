@@ -58,6 +58,25 @@ func (rb RoundBallot) IsWellFormed(networkID []byte) (err error) {
 	return
 }
 
+var RoundBallotValidCheckerFuncs = []sebakcommon.CheckerFunc{
+	CheckTransactionCheckpoint,
+	CheckTransactionSource,
+	CheckTransactionBaseFee,
+	CheckTransactionOperation,
+	CheckTransactionVerifySignature,
+	CheckTransactionHashMatch,
+}
+
+func (rb RoundBallot) IsAllTxsValid(networkID []byte) (err error) {
+	checker := &RoundBallotChecker{
+		DefaultChecker: sebakcommon.DefaultChecker{RoundBallotValidCheckerFuncs},
+		NetworkID:      networkID,
+		RoundBallot:    rb,
+	}
+	sebakcommon.RunChecker(checker, sebakcommon.DefaultDeferFunc)
+	return
+}
+
 func (rb RoundBallot) Equal(m sebakcommon.Message) bool {
 	return rb.H.Hash == m.GetHash()
 }

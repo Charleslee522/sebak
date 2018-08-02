@@ -101,10 +101,7 @@ func (tx Transaction) IsWellFormed(networkID []byte) (err error) {
 		NetworkID:      networkID,
 		Transaction:    tx,
 	}
-	if err = sebakcommon.RunChecker(checker, sebakcommon.DefaultDeferFunc); err != nil {
-		return
-	}
-
+	err = sebakcommon.RunChecker(checker, sebakcommon.DefaultDeferFunc)
 	return
 }
 
