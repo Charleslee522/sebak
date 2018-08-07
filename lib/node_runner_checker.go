@@ -111,16 +111,16 @@ type NodeRunnerHandleBallotChecker struct {
 func CheckNodeRunnerHandleBallotUnmarshal(c sebakcommon.Checker, args ...interface{}) (err error) {
 	checker := c.(*NodeRunnerHandleBallotChecker)
 
-	var rb Ballot
-	if rb, err = NewBallotFromJSON(checker.Message.Data); err != nil {
+	var b Ballot
+	if b, err = NewBallotFromJSON(checker.Message.Data); err != nil {
 		return
 	}
 
-	if err = rb.IsWellFormed(checker.NetworkID); err != nil {
+	if err = b.IsWellFormed(checker.NetworkID); err != nil {
 		return
 	}
 
-	checker.Ballot = rb
+	checker.Ballot = b
 	checker.NodeRunner.Log().Debug("message is ballot")
 
 	return

@@ -62,23 +62,23 @@ type RunningRound struct {
 	Voted        map[ /* Proposer */ string]RoundVote
 }
 
-func NewRunningRound(proposer string, rb Ballot) *RunningRound {
+func NewRunningRound(proposer string, b Ballot) *RunningRound {
 	transactions := map[string][]string{
-		rb.Proposer(): rb.Transactions(),
+		b.Proposer(): b.Transactions(),
 	}
 
 	voted := map[string]RoundVote{
-		rb.Proposer(): RoundVote{
-			rb.Source(): rb.Vote(),
+		b.Proposer(): RoundVote{
+			b.Source(): b.Vote(),
 		},
 	}
 
-	if !rb.IsFromProposer() {
-		voted[rb.Proposer()][rb.Proposer()] = VotingYES
+	if !b.IsFromProposer() {
+		voted[b.Proposer()][b.Proposer()] = VotingYES
 	}
 
 	return &RunningRound{
-		Round:        rb.Round(),
+		Round:        b.Round(),
 		Proposer:     proposer,
 		Transactions: transactions,
 		Voted:        voted,
@@ -95,26 +95,26 @@ func (rr *RunningRound) RoundVote(proposer string) (rv RoundVote, err error) {
 	return
 }
 
-func (rr *RunningRound) IsVoted(rb Ballot) bool {
-	roundVote, err := rr.RoundVote(rb.Proposer())
+func (rr *RunningRound) IsVoted(b Ballot) bool {
+	roundVote, err := rr.RoundVote(b.Proposer())
 	if err != nil {
 		return false
 	}
 
-	_, voted := roundVote[rb.Source()]
+	_, voted := roundVote[b.Source()]
 	return voted
 }
 
-func (rr *RunningRound) Vote(rb Ballot) (isNew bool) {
+func (rr *RunningRound) Vote(b Ballot) (isNew bool) {
 	rr.Lock()
 	defer rr.Unlock()
 
-	if _, found := rr.Voted[rb.Proposer()]; !found {
-		rr.Voted[rb.Proposer()] = RoundVote{}
+	if _, found := rr.Voted[b.Proposer()]; !found {
+		rr.Voted[b.Proposer()] = RoundVote{}
 		isNew = true
 	}
 
-	rr.Voted[rb.Proposer()][rb.Source()] = rb.Vote()
+	rr.Voted[b.Proposer()][b.Source()] = b.Vote()
 	return
 }
 
