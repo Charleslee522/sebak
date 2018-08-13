@@ -6,7 +6,7 @@ import (
 	"boscoin.io/sebak/lib/node"
 )
 
-type NodeRunnerHandleTransactionChecker struct {
+type NodeRunnerHandleBallotTransactionChecker struct {
 	sebakcommon.DefaultChecker
 
 	NodeRunner *NodeRunner
@@ -23,7 +23,7 @@ type NodeRunnerHandleTransactionChecker struct {
 // CheckNodeRunnerHandleTransactionsIsNew checks the incoming transaction is
 // already stored or not.
 func CheckNodeRunnerHandleTransactionsIsNew(c sebakcommon.Checker, args ...interface{}) (err error) {
-	checker := c.(*NodeRunnerHandleTransactionChecker)
+	checker := c.(*NodeRunnerHandleBallotTransactionChecker)
 
 	var validTransactions []string
 	for _, hash := range checker.Transactions {
@@ -48,7 +48,7 @@ func CheckNodeRunnerHandleTransactionsIsNew(c sebakcommon.Checker, args ...inter
 // CheckNodeRunnerHandleTransactionsGetMissingTransaction will get the missing
 // tranactions, that is, not in `TransactionPool` from proposer.
 func CheckNodeRunnerHandleTransactionsGetMissingTransaction(c sebakcommon.Checker, args ...interface{}) (err error) {
-	checker := c.(*NodeRunnerHandleTransactionChecker)
+	checker := c.(*NodeRunnerHandleBallotTransactionChecker)
 
 	var validTransactions []string
 	for _, hash := range checker.ValidTransactions {
@@ -68,7 +68,7 @@ func CheckNodeRunnerHandleTransactionsGetMissingTransaction(c sebakcommon.Checke
 // CheckNodeRunnerHandleTransactionsSameSource checks there are transactions
 // which has same source in the `Transactions`.
 func CheckNodeRunnerHandleTransactionsSameSource(c sebakcommon.Checker, args ...interface{}) (err error) {
-	checker := c.(*NodeRunnerHandleTransactionChecker)
+	checker := c.(*NodeRunnerHandleBallotTransactionChecker)
 
 	var validTransactions []string
 	sources := map[string]bool{}
@@ -93,7 +93,7 @@ func CheckNodeRunnerHandleTransactionsSameSource(c sebakcommon.Checker, args ...
 
 // CheckNodeRunnerHandleTransactionsSourceCheck calls `Transaction.Validate()`.
 func CheckNodeRunnerHandleTransactionsSourceCheck(c sebakcommon.Checker, args ...interface{}) (err error) {
-	checker := c.(*NodeRunnerHandleTransactionChecker)
+	checker := c.(*NodeRunnerHandleBallotTransactionChecker)
 
 	var validTransactions []string
 	for _, hash := range checker.ValidTransactions {

@@ -37,8 +37,12 @@ func (o OperationBodyCreateAccount) IsWellFormed([]byte) (err error) {
 
 func (o OperationBodyCreateAccount) Validate(st *sebakstorage.LevelDBBackend) (err error) {
 	var exists bool
-	if exists, err = ExistBlockAccount(st, o.Target); err == nil && exists {
+	if exists, err = ExistBlockAccount(st, o.Target); err != nil {
+		return
+	}
+	if exists {
 		err = sebakerror.ErrorBlockAccountAlreadyExists
+		return
 	}
 
 	return
