@@ -454,31 +454,24 @@ func (nr *NodeRunner) proposeNewBallot(roundNumber uint64) error {
 	nr.log.Debug("new round proposed", "round", round, "transactions", availableTransactions)
 
 	transactionsChecker := &NodeRunnerHandleBallotTransactionChecker{
-		DefaultChecker: sebakcommon.DefaultChecker{handleBallotTransactionCheckerFuncs},
-		NodeRunner:     nr,
-		LocalNode:      nr.localNode,
-		NetworkID:      nr.networkID,
-		Transactions:   availableTransactions,
-		CheckAll:       true,
-		VotingHole:     VotingNOTYET,
+		DefaultChecker:       sebakcommon.DefaultChecker{handleBallotTransactionCheckerFuncs},
+		NodeRunner:           nr,
+		LocalNode:            nr.localNode,
+		NetworkID:            nr.networkID,
+		Transactions:         availableTransactions,
+		CheckAll:             true,
+		VotingHole:           VotingNOTYET,
+		ValidTransactionsMap: map[string]bool{},
 	}
 
-	err := sebakcommon.RunChecker(transactionsChecker, sebakcommon.DefaultDeferFunc)
-	if err != nil {
+	if err := sebakcommon.RunChecker(transactionsChecker, sebakcommon.DefaultDeferFunc); err != nil {
 		return err
 	}
 
 	// remove invalid transactions
-	var invalidTransactions []string
-	for _, hash := range availableTransactions {
-		if _, found := sebakcommon.InStringArray(transactionsChecker.ValidTransactions, hash); found {
-			continue
-		}
-		invalidTransactions = append(invalidTransactions, hash)
-	}
-	nr.Consensus().TransactionPool.Remove(invalidTransactions...)
+	nr.Consensus().TransactionPool.Remove(transactionsChecker.InvalidTransactions()...)
 
-	ballot := NewBallot(nr.localNode, round, transactionsChecker.ValidTransactions)
+	ballot := NewBallot(nr.localNode, round, transactionsChecker.ValidTransactions())
 	ballot.SetVote(sebakcommon.BallotStateINIT, VotingYES)
 	ballot.Sign(nr.localNode.Keypair(), nr.networkID)
 

@@ -365,12 +365,13 @@ func CheckNodeRunnerHandleINITBallotValidateTransactions(c sebakcommon.Checker, 
 	}
 
 	transactionsChecker := &NodeRunnerHandleBallotTransactionChecker{
-		DefaultChecker: sebakcommon.DefaultChecker{handleBallotTransactionCheckerFuncs},
-		NodeRunner:     checker.NodeRunner,
-		LocalNode:      checker.LocalNode,
-		NetworkID:      checker.NetworkID,
-		Transactions:   checker.Ballot.Transactions(),
-		VotingHole:     VotingNOTYET,
+		DefaultChecker:       sebakcommon.DefaultChecker{handleBallotTransactionCheckerFuncs},
+		NodeRunner:           checker.NodeRunner,
+		LocalNode:            checker.LocalNode,
+		NetworkID:            checker.NetworkID,
+		Transactions:         checker.Ballot.Transactions(),
+		VotingHole:           VotingNOTYET,
+		ValidTransactionsMap: map[string]bool{},
 	}
 
 	err = sebakcommon.RunChecker(transactionsChecker, sebakcommon.DefaultDeferFunc)
