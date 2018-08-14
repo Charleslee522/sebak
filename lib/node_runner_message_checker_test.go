@@ -28,13 +28,6 @@ func MakeNodeRunner() (*NodeRunner, *sebaknode.LocalNode) {
 }
 
 func TestMessageChecker(t *testing.T) {
-	var CheckerFuncs = []sebakcommon.CheckerFunc{
-		CheckNodeRunnerHandleMessageTransactionUnmarshal,
-		CheckNodeRunnerHandleMessageHasTransactionAlready,
-		CheckNodeRunnerHandleMessageHistory,
-		CheckNodeRunnerHandleMessagePushIntoTransactionPool,
-	}
-
 	_, validTx := TestMakeTransaction(networkID, 1)
 	var b []byte
 	var err error
@@ -46,7 +39,7 @@ func TestMessageChecker(t *testing.T) {
 	validMessage := sebaknetwork.Message{Type: "message", Data: b}
 	nodeRunner, localNode := MakeNodeRunner()
 	checker := &NodeRunnerHandleMessageChecker{
-		DefaultChecker: sebakcommon.DefaultChecker{CheckerFuncs},
+		DefaultChecker: sebakcommon.DefaultChecker{},
 		NodeRunner:     nodeRunner,
 		LocalNode:      localNode,
 		NetworkID:      networkID,
@@ -80,6 +73,15 @@ func TestMessageChecker(t *testing.T) {
 
 	err = CheckNodeRunnerHandleMessagePushIntoTransactionPool(checker)
 	assert.Nil(t, err)
+
+	var CheckerFuncs = []sebakcommon.CheckerFunc{
+		CheckNodeRunnerHandleMessageTransactionUnmarshal,
+		CheckNodeRunnerHandleMessageHasTransactionAlready,
+		CheckNodeRunnerHandleMessageHistory,
+		CheckNodeRunnerHandleMessagePushIntoTransactionPool,
+	}
+
+	checker.DefaultChecker = sebakcommon.DefaultChecker{CheckerFuncs}
 
 	err = sebakcommon.RunChecker(checker, sebakcommon.DefaultDeferFunc)
 	assert.Equal(t, err, sebakerror.ErrorNewButKnownMessage)
