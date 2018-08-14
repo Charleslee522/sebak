@@ -33,7 +33,6 @@ func TestMessageChecker(t *testing.T) {
 		CheckNodeRunnerHandleMessageHasTransactionAlready,
 		CheckNodeRunnerHandleMessageHistory,
 		CheckNodeRunnerHandleMessagePushIntoTransactionPool,
-		CheckNodeRunnerHandleMessageTransactionBroadcast,
 	}
 
 	_, validTx := TestMakeTransaction(networkID, 1)
