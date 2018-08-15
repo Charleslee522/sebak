@@ -10,7 +10,6 @@ package sebak
 import (
 	"context"
 	"errors"
-	"fmt"
 	"sort"
 	"time"
 
@@ -241,9 +240,9 @@ func (nr *NodeRunner) handleMessage() {
 				err = errors.New("invalid validator data was received")
 			}
 		case sebaknetwork.MessageFromClient:
-			err = nr.handleMessageFromClient(message)
+			err = nr.HandleMessageFromClient(message)
 		case sebaknetwork.BallotMessage:
-			err = nr.handleBallotMessage(message)
+			err = nr.HandleBallotMessage(message)
 		default:
 			err = errors.New("got unknown message")
 		}
@@ -257,7 +256,7 @@ func (nr *NodeRunner) handleMessage() {
 	}
 }
 
-func (nr *NodeRunner) handleMessageFromClient(message sebaknetwork.Message) (err error) {
+func (nr *NodeRunner) HandleMessageFromClient(message sebaknetwork.Message) (err error) {
 	nr.log.Debug("got message`", "message", message.Head(50))
 
 	checker := &NodeRunnerHandleMessageChecker{
@@ -278,7 +277,7 @@ func (nr *NodeRunner) handleMessageFromClient(message sebaknetwork.Message) (err
 	return
 }
 
-func (nr *NodeRunner) handleBallotMessage(message sebaknetwork.Message) (err error) {
+func (nr *NodeRunner) HandleBallotMessage(message sebaknetwork.Message) (err error) {
 	nr.log.Debug("got ballot", "message", message.Head(50))
 
 	baseChecker := &NodeRunnerHandleBallotChecker{
@@ -373,12 +372,7 @@ func (nr *NodeRunner) startRound() {
 func (nr *NodeRunner) CalculateProposer(blockHeight uint64, roundNumber uint64) string {
 	candidates := sort.StringSlice(nr.connectionManager.RoundCandidates())
 	candidates.Sort()
-
-	var hashedNumber int
-	for _, i := range sebakcommon.MakeHash([]byte(fmt.Sprintf("%d+%d", blockHeight, roundNumber))) {
-		hashedNumber += int(i)
-	}
-	return candidates[hashedNumber%len(candidates)]
+	return candidates[(blockHeight+roundNumber)%uint64(len(candidates))]
 }
 
 func (nr *NodeRunner) StartNewRound(roundNumber uint64) {

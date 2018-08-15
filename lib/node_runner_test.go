@@ -22,7 +22,7 @@ func init() {
 	kp, _ = keypair.Random()
 }
 
-func createTestNodeRunner(n int) []*NodeRunner {
+func CreateTestNodeRunner(n int) []*NodeRunner {
 	var ns []*sebaknetwork.MemoryNetwork
 	var nodes []*sebaknode.LocalNode
 	for i := 0; i < n; i++ {
@@ -66,7 +66,7 @@ func createTestNodeRunner(n int) []*NodeRunner {
 }
 
 func createTestNodeRunnerWithReady(n int) []*NodeRunner {
-	nodeRunners := createTestNodeRunner(n)
+	nodeRunners := CreateTestNodeRunner(n)
 
 	for _, nr := range nodeRunners {
 		go nr.Start()
