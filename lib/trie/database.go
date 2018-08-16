@@ -60,6 +60,12 @@ func (b *ldbBatch) Put(key, value []byte) error {
 	return nil
 }
 
+func (b *ldbBatch) Delete(key []byte) error {
+	b.b.Delete(key)
+	b.size += 1
+	return nil
+}
+
 func (b *ldbBatch) Write() error {
 	return b.db.Write(b.b, nil)
 }
