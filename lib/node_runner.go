@@ -261,9 +261,9 @@ func (nr *NodeRunner) handleMessage() {
 				err = errors.New("invalid validator data was received")
 			}
 		case sebaknetwork.MessageFromClient:
-			err = nr.HandleMessageFromClient(message)
+			err = nr.handleMessageFromClient(message)
 		case sebaknetwork.BallotMessage:
-			err = nr.HandleBallotMessage(message)
+			err = nr.handleBallotMessage(message)
 		default:
 			err = errors.New("got unknown message")
 		}
@@ -277,7 +277,7 @@ func (nr *NodeRunner) handleMessage() {
 	}
 }
 
-func (nr *NodeRunner) HandleMessageFromClient(message sebaknetwork.Message) (err error) {
+func (nr *NodeRunner) handleMessageFromClient(message sebaknetwork.Message) (err error) {
 	nr.log.Debug("got message`", "message", message.Head(50))
 
 	checker := &NodeRunnerHandleMessageChecker{
@@ -298,7 +298,7 @@ func (nr *NodeRunner) HandleMessageFromClient(message sebaknetwork.Message) (err
 	return
 }
 
-func (nr *NodeRunner) HandleBallotMessage(message sebaknetwork.Message) (err error) {
+func (nr *NodeRunner) handleBallotMessage(message sebaknetwork.Message) (err error) {
 	nr.log.Debug("got ballot", "message", message.Head(50))
 
 	baseChecker := &NodeRunnerHandleBallotChecker{

@@ -25,7 +25,7 @@ func TestIsaacSimulationProposer(t *testing.T) {
 	proposer := nodeRunner.localNode
 
 	var err error
-	err = nodeRunner.HandleMessageFromClient(message)
+	err = nodeRunner.handleMessageFromClient(message)
 	assert.Nil(t, err)
 	assert.True(t, nodeRunner.Consensus().TransactionPool.Has(tx.GetHash()))
 
@@ -124,6 +124,6 @@ func receiveBallot(t *testing.T, nodeRunner *NodeRunner, ballot *Ballot) error {
 	assert.Nil(t, err)
 
 	ballotMessage := sebaknetwork.Message{Type: sebaknetwork.BallotMessage, Data: data}
-	err = nodeRunner.HandleBallotMessage(ballotMessage)
+	err = nodeRunner.handleBallotMessage(ballotMessage)
 	return err
 }
