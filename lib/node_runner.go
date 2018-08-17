@@ -138,7 +138,7 @@ type SimpleProposerCalculator struct {
 }
 
 func (c SimpleProposerCalculator) Calculate(nr *NodeRunner, blockHeight uint64, roundNumber uint64) string {
-	candidates := sort.StringSlice(nr.connectionManager.RoundCandidates())
+	candidates := sort.StringSlice(nr.connectionManager.AllValidators())
 	candidates.Sort()
 
 	return candidates[(blockHeight+roundNumber)%uint64(len(candidates))]
@@ -251,7 +251,7 @@ func (nr *NodeRunner) handleMessage() {
 		var err error
 
 		if message.IsEmpty() {
-			nr.log.Error("got empty message`")
+			nr.log.Debug("got empty message`")
 			continue
 		}
 		switch message.Type {
