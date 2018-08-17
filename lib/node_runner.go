@@ -23,10 +23,11 @@ import (
 )
 
 var (
-	TimeoutExpireRound          time.Duration = time.Second * 10
-	TimeoutProposeNewBallot     time.Duration = time.Second * 2
-	TimeoutProposeNewBallotFull time.Duration = time.Second * 1
-	MaxTransactionsInBallot     int           = 1000
+	TimeoutExpireRound                           time.Duration = time.Second * 10
+	TimeoutProposeNewBallot                      time.Duration = time.Second * 2
+	TimeoutProposeNewBallotFull                  time.Duration = time.Second * 1
+	MaxTransactionsInBallot                      int           = 1000
+	INITBallotProposerConfirmedTimeAllowDuration time.Duration = time.Minute * 1
 )
 
 var DefaultHandleMessageFromClientCheckerFuncs = []sebakcommon.CheckerFunc{
@@ -47,7 +48,7 @@ var DefaultHandleINITBallotCheckerFuncs = []sebakcommon.CheckerFunc{
 	CheckNodeRunnerHandleBallotAlreadyVoted,
 	CheckNodeRunnerHandleBallotVote,
 	CheckNodeRunnerHandleBallotIsSameProposer,
-	CheckNodeRunnerHandleINITBallotValidateTransactions,
+	CheckNodeRunnerHandleINITBallotValidateBallot,
 	CheckNodeRunnerHandleINITBallotBroadcast,
 }
 

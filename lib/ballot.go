@@ -2,6 +2,7 @@ package sebak
 
 import (
 	"encoding/json"
+	"time"
 
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/stellar/go/keypair"
@@ -65,6 +66,10 @@ func (b Ballot) String() string {
 func (b Ballot) IsWellFormed(networkID []byte) (err error) {
 	if !b.B.State.IsValid() {
 		err = sebakerror.ErrorInvalidState
+		return
+	}
+
+	if _, err = time.Parse(sebakcommon.TIMEFORMAT_ISO8601, b.ProposerConfirmed()); err != nil {
 		return
 	}
 

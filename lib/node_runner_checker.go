@@ -2,6 +2,7 @@ package sebak
 
 import (
 	"errors"
+	"time"
 
 	"boscoin.io/sebak/lib/common"
 	"boscoin.io/sebak/lib/error"
@@ -302,9 +303,9 @@ var handleBallotTransactionCheckerFuncs = []sebakcommon.CheckerFunc{
 	CheckNodeRunnerHandleTransactionsSourceCheck,
 }
 
-// CheckNodeRunnerHandleINITBallotValidateTransactions validates the
-// transactions of newly added ballot.
-func CheckNodeRunnerHandleINITBallotValidateTransactions(c sebakcommon.Checker, args ...interface{}) (err error) {
+// CheckNodeRunnerHandleINITBallotValidateBallot validates the transactions of
+// newly added ballot.
+func CheckNodeRunnerHandleINITBallotValidateBallot(c sebakcommon.Checker, args ...interface{}) (err error) {
 	checker := c.(*NodeRunnerHandleBallotChecker)
 
 	if !checker.IsNew || checker.VotingFinished {
@@ -320,8 +321,13 @@ func CheckNodeRunnerHandleINITBallotValidateTransactions(c sebakcommon.Checker, 
 		return
 	}
 
-	if checker.Ballot.TransactionsLength() < 1 {
-		checker.VotingHole = VotingYES
+	confirmed, _ := time.Parse(sebakcommon.TIMEFORMAT_ISO8601, checker.Ballot.ProposerConfirmed())
+	sub := time.Now().Sub(confirmed)
+	if sub < 0 {
+		sub *= -1
+	}
+	if sub > INITBallotProposerConfirmedTimeAllowDuration {
+		checker.VotingHole = VotingNO
 		return
 	}
 

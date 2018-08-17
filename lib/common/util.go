@@ -17,8 +17,12 @@ import (
 	uuid "github.com/satori/go.uuid"
 )
 
+var (
+	TIMEFORMAT_ISO8601 string = "2006-01-02T15:04:05.000000000Z07:00"
+)
+
 func NowISO8601() string {
-	return time.Now().Format("2006-01-02T15:04:05.000000000Z07:00")
+	return time.Now().Format(TIMEFORMAT_ISO8601)
 }
 
 func GetUniqueIDFromUUID() string {
