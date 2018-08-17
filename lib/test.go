@@ -4,11 +4,25 @@ import (
 	"fmt"
 	"math/rand"
 
-	"boscoin.io/sebak/lib/common"
-
 	"github.com/google/uuid"
 	"github.com/stellar/go/keypair"
+
+	"boscoin.io/sebak/lib/common"
 )
+
+func testMakeNewBlock(transactions []string) Block {
+	kp, _ := keypair.Random()
+
+	return NewBlock(
+		kp.Address(),
+		Round{
+			BlockHeight: 0,
+			BlockHash:   "",
+		},
+		transactions,
+		sebakcommon.NowISO8601(),
+	)
+}
 
 func testMakeBlockAccount() *BlockAccount {
 	kp, _ := keypair.Random()
@@ -32,8 +46,9 @@ func TestMakeNewBlockOperation(networkID []byte, n int) (bos []BlockOperation) {
 func TestMakeNewBlockTransaction(networkID []byte, n int) BlockTransaction {
 	_, tx := TestMakeTransaction(networkID, n)
 
+	block := testMakeNewBlock([]string{tx.GetHash()})
 	a, _ := tx.Serialize()
-	return NewBlockTransactionFromTransaction(tx, a)
+	return NewBlockTransactionFromTransaction(block, tx, a)
 }
 
 func TestMakeOperationBodyPayment(amount int, addressList ...string) OperationBodyPayment {

@@ -1,7 +1,6 @@
 package sebak
 
 import (
-	"boscoin.io/sebak/lib/common"
 	"bufio"
 	"bytes"
 	"encoding/json"
@@ -11,6 +10,8 @@ import (
 	"net/http/httptest"
 	"sync"
 	"testing"
+
+	"boscoin.io/sebak/lib/common"
 
 	"boscoin.io/sebak/lib/storage"
 	"github.com/gorilla/mux"
@@ -120,12 +121,19 @@ func TestGetAccountTransactionsHandler(t *testing.T) {
 	checkError(t, err)
 
 	var bts []BlockTransaction
+	var txs []Transaction
+	var txHashes []string
 	for i := 0; i < 5; i++ {
 		tx := TestMakeTransactionWithKeypair(networkID, 1, kp)
+		txs = append(txs, tx)
+		txHashes = append(txHashes, tx.GetHash())
+	}
 
+	block := testMakeNewBlock(txHashes)
+	for _, tx := range txs {
 		a, err := tx.Serialize()
 		checkError(t, err)
-		bt := NewBlockTransactionFromTransaction(tx, a)
+		bt := NewBlockTransactionFromTransaction(block, tx, a)
 		err = bt.Save(storage)
 		checkError(t, err)
 		bts = append(bts, bt)
@@ -158,12 +166,19 @@ func TestGetAccountTransactionsHandler(t *testing.T) {
 	}()
 
 	// Makes Some Events
+	txs = []Transaction{}
+	txHashes = []string{}
 	for i := 0; i < 20; i++ {
 		tx := TestMakeTransactionWithKeypair(networkID, 1, kp)
+		txs = append(txs, tx)
+		txHashes = append(txHashes, tx.GetHash())
+	}
 
+	block = testMakeNewBlock(txHashes)
+	for _, tx := range txs {
 		a, err := tx.Serialize()
 		checkError(t, err)
-		bt := NewBlockTransactionFromTransaction(tx, a)
+		bt := NewBlockTransactionFromTransaction(block, tx, a)
 		err = bt.Save(storage)
 		checkError(t, err)
 		bts = append(bts, bt)
@@ -211,11 +226,19 @@ func TestGetAccountOperationsHandler(t *testing.T) {
 	checkError(t, err)
 
 	var bos []BlockOperation
+	var txs []Transaction
+	var txHashes []string
 	for i := 0; i < 5; i++ {
 		tx := TestMakeTransactionWithKeypair(networkID, 3, kp)
+		txs = append(txs, tx)
+		txHashes = append(txHashes, tx.GetHash())
+	}
+
+	block := testMakeNewBlock(txHashes)
+	for _, tx := range txs {
 		a, err := tx.Serialize()
 		checkError(t, err)
-		bt := NewBlockTransactionFromTransaction(tx, a)
+		bt := NewBlockTransactionFromTransaction(block, tx, a)
 		bt.Save(storage)
 
 		for _, boHash := range bt.Operations {
@@ -251,12 +274,20 @@ func TestGetAccountOperationsHandler(t *testing.T) {
 		wg.Done()
 	}()
 
+	txs = []Transaction{}
+	txHashes = []string{}
 	// Makes Some Events
 	for i := 0; i < 20; i++ {
 		tx := TestMakeTransactionWithKeypair(networkID, 3, kp)
+		txs = append(txs, tx)
+		txHashes = append(txHashes, tx.GetHash())
+	}
+
+	block = testMakeNewBlock(txHashes)
+	for _, tx := range txs {
 		a, err := tx.Serialize()
 		checkError(t, err)
-		bt := NewBlockTransactionFromTransaction(tx, a)
+		bt := NewBlockTransactionFromTransaction(block, tx, a)
 		bt.Save(storage)
 
 		for _, boHash := range bt.Operations {
@@ -311,7 +342,9 @@ func TestGetTransactionByHashHandler(t *testing.T) {
 	tx := TestMakeTransactionWithKeypair(networkID, 1, kp)
 	a, err := tx.Serialize()
 	checkError(t, err)
-	bt := NewBlockTransactionFromTransaction(tx, a)
+
+	block := testMakeNewBlock([]string{tx.GetHash()})
+	bt := NewBlockTransactionFromTransaction(block, tx, a)
 
 	// Do a Request
 	url := ts.URL + fmt.Sprintf("/transactions/%s", bt.Hash)
@@ -373,12 +406,19 @@ func TestGetTransactionsHandler(t *testing.T) {
 	defer ts.Close()
 
 	var bts []BlockTransaction
+	var txs []Transaction
+	var txHashes []string
 	for i := 0; i < 5; i++ {
 		_, tx := TestMakeTransaction(networkID, 1)
+		txs = append(txs, tx)
+		txHashes = append(txHashes, tx.GetHash())
+	}
 
+	block := testMakeNewBlock(txHashes)
+	for _, tx := range txs {
 		a, err := tx.Serialize()
 		checkError(t, err)
-		bt := NewBlockTransactionFromTransaction(tx, a)
+		bt := NewBlockTransactionFromTransaction(block, tx, a)
 		err = bt.Save(storage)
 		checkError(t, err)
 		bts = append(bts, bt)
@@ -410,12 +450,19 @@ func TestGetTransactionsHandler(t *testing.T) {
 		wg.Done()
 	}()
 
+	txs = []Transaction{}
+	txHashes = []string{}
 	for i := 0; i < 20; i++ {
 		_, tx := TestMakeTransaction(networkID, 1)
+		txs = append(txs, tx)
+		txHashes = append(txHashes, tx.GetHash())
+	}
 
+	block = testMakeNewBlock(txHashes)
+	for _, tx := range txs {
 		a, err := tx.Serialize()
 		checkError(t, err)
-		bt := NewBlockTransactionFromTransaction(tx, a)
+		bt := NewBlockTransactionFromTransaction(block, tx, a)
 		err = bt.Save(storage)
 		checkError(t, err)
 		bts = append(bts, bt)
