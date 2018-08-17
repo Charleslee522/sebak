@@ -22,13 +22,6 @@ import (
 	"boscoin.io/sebak/lib/storage"
 )
 
-var (
-	TimeoutExpireRound          time.Duration = time.Second * 10
-	TimeoutProposeNewBallot     time.Duration = time.Second * 2
-	TimeoutProposeNewBallotFull time.Duration = time.Second * 1
-	MaxTransactionsInBallot     int           = 1000
-)
-
 var DefaultHandleMessageFromClientCheckerFuncs = []sebakcommon.CheckerFunc{
 	CheckNodeRunnerHandleMessageTransactionUnmarshal,
 	CheckNodeRunnerHandleMessageHasTransactionAlready,
@@ -75,6 +68,7 @@ type NodeRunner struct {
 	consensus         *ISAAC
 	connectionManager *sebaknetwork.ConnectionManager
 	storage           *sebakstorage.LevelDBBackend
+	conf              *NodeRunnerConfiguration
 
 	handleMessageFromClientCheckerFuncs []sebakcommon.CheckerFunc
 	handleBaseBallotCheckerFuncs        []sebakcommon.CheckerFunc
@@ -106,6 +100,7 @@ func NewNodeRunner(
 		consensus: consensus,
 		storage:   storage,
 		log:       log.New(logging.Ctx{"node": localNode.Alias()}),
+		conf:      NewNodeRunnerConfiguration(),
 	}
 	nr.ctx = context.WithValue(context.Background(), "localNode", localNode)
 	nr.ctx = context.WithValue(nr.ctx, "networkID", nr.networkID)
@@ -389,7 +384,7 @@ func (nr *NodeRunner) StartNewRound(roundNumber uint64) {
 
 	go func() {
 		// wait for new ballot from new proposer
-		nr.timerExpireRound = time.NewTimer(TimeoutExpireRound)
+		nr.timerExpireRound = time.NewTimer(nr.conf.TimeoutINIT) // TODO Don't stop. Just go through.
 		go func() {
 			for {
 				select {
@@ -421,10 +416,10 @@ func (nr *NodeRunner) readyToProposeNewBallot(roundNumber uint64) {
 	var timeout time.Duration
 	// if incoming transaactions are over `MaxTransactionsInBallot`, just
 	// start.
-	if nr.consensus.TransactionPool.Len() > MaxTransactionsInBallot {
-		timeout = TimeoutProposeNewBallotFull
+	if nr.consensus.TransactionPool.Len() > nr.conf.TransactionsLimit {
+		timeout = 0
 	} else {
-		timeout = TimeoutProposeNewBallot
+		timeout = nr.conf.TimeoutGatherTxs
 	}
 
 	timer := time.NewTimer(timeout)
@@ -450,7 +445,7 @@ func (nr *NodeRunner) proposeNewBallot(roundNumber uint64) error {
 	}
 
 	// collect incoming transactions from `TransactionPool`
-	availableTransactions := nr.consensus.TransactionPool.AvailableTransactions()
+	availableTransactions := nr.consensus.TransactionPool.AvailableTransactions(nr.conf)
 	nr.log.Debug("new round proposed", "round", round, "transactions", availableTransactions)
 
 	transactionsChecker := &NodeRunnerHandleTransactionChecker{

@@ -6,4 +6,5 @@ const (
 	VotingNOTYET VotingHole = "NOT-YET"
 	VotingYES    VotingHole = "YES"
 	VotingNO     VotingHole = "NO"
+	VotingNIL    VotingHole = "NIL"
 )

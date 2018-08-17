@@ -249,15 +249,15 @@ func (tp *TransactionPool) Remove(hashes ...string) {
 	return
 }
 
-func (tp *TransactionPool) AvailableTransactions() []string {
+func (tp *TransactionPool) AvailableTransactions(conf *NodeRunnerConfiguration) []string {
 	tp.Lock()
 	defer tp.Unlock()
 
-	if tp.Len() <= MaxTransactionsInBallot {
+	if tp.Len() <= conf.TransactionsLimit {
 		return tp.Hashes
 	}
 
-	return tp.Hashes[:MaxTransactionsInBallot]
+	return tp.Hashes[:conf.TransactionsLimit]
 }
 
 type ISAAC struct {

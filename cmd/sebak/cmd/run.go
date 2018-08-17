@@ -46,19 +46,29 @@ var (
 	flagValidators          string = sebakcommon.GetENVValue("SEBAK_VALIDATORS", "")
 	flagSIGNThreshold       string = sebakcommon.GetENVValue("SEBAK_SIGN_THRESHOLD", "66")
 	flagACCEPTThreshold     string = sebakcommon.GetENVValue("SEBAK_ACCEPT_THRESHOLD", "66")
+	flagTimeoutINIT         string = sebakcommon.GetENVValue("TIMEOUT_INIT", "2")
+	flagTimeoutSIGN         string = sebakcommon.GetENVValue("TIMEOUT_SIGN", "2")
+	flagTimeoutACCEPT       string = sebakcommon.GetENVValue("TIMEOUT_ACCEPT", "2")
+	flagTimeoutGatherTxs    string = sebakcommon.GetENVValue("TIMEOUT_GATHER_TRANSACTIONS", "2")
+	flagTransactionsLimit   string = sebakcommon.GetENVValue("TRANSACTIONS_LIMIT", "1000")
 )
 
 var (
 	nodeCmd *cobra.Command
 
-	kp              *keypair.Full
-	nodeEndpoint    *sebakcommon.Endpoint
-	storageConfig   *sebakstorage.Config
-	validators      []*sebaknode.Validator
-	signThreshold   int
-	acceptThreshold int
-	logLevel        logging.Lvl
-	log             logging.Logger
+	kp                *keypair.Full
+	nodeEndpoint      *sebakcommon.Endpoint
+	storageConfig     *sebakstorage.Config
+	validators        []*sebaknode.Validator
+	signThreshold     int
+	acceptThreshold   int
+	timeoutINIT       float64
+	timeoutSIGN       float64
+	timeoutACCEPT     float64
+	timeoutGatherTxs  float64
+	transactionsLimit int
+	logLevel          logging.Lvl
+	log               logging.Logger
 )
 
 func init() {
@@ -117,6 +127,11 @@ func init() {
 	nodeCmd.Flags().StringVar(&flagValidators, "validators", flagValidators, "set validator: <endpoint url>?address=<public address>[&alias=<alias>] [ <validator>...]")
 	nodeCmd.Flags().StringVar(&flagSIGNThreshold, "sign-threshold", flagSIGNThreshold, "threshold for sign state")
 	nodeCmd.Flags().StringVar(&flagACCEPTThreshold, "accept-threshold", flagACCEPTThreshold, "threshold for accept state")
+	nodeCmd.Flags().StringVar(&flagTimeoutINIT, "timeout-init", flagTimeoutINIT, "timeout of the init state")
+	nodeCmd.Flags().StringVar(&flagTimeoutSIGN, "timeout-sign", flagTimeoutSIGN, "timeout of the sign state")
+	nodeCmd.Flags().StringVar(&flagTimeoutACCEPT, "timeout-accept", flagTimeoutACCEPT, "timeout of  the accept state")
+	nodeCmd.Flags().StringVar(&flagTimeoutGatherTxs, "timeout-gather-transactions", flagTimeoutGatherTxs, "timeout for gathering transactions")
+	nodeCmd.Flags().StringVar(&flagTransactionsLimit, "transactions-limit", flagTransactionsLimit, "transactions limit in a ballot")
 
 	rootCmd.AddCommand(nodeCmd)
 }
@@ -197,9 +212,30 @@ func parseFlagsNode() {
 		common.PrintFlagsError(nodeCmd, "--storage", err)
 	}
 
+	if timeoutINIT, err = strconv.ParseFloat(flagTimeoutINIT, 64); err != nil {
+		common.PrintFlagsError(nodeCmd, "--timeout-init", err)
+	}
+
+	if timeoutSIGN, err = strconv.ParseFloat(flagTimeoutSIGN, 64); err != nil {
+		common.PrintFlagsError(nodeCmd, "--timeout-sign", err)
+	}
+
+	if timeoutACCEPT, err = strconv.ParseFloat(flagTimeoutACCEPT, 64); err != nil {
+		common.PrintFlagsError(nodeCmd, "--timeout-accept", err)
+	}
+
+	if timeoutGatherTxs, err = strconv.ParseFloat(flagTimeoutGatherTxs, 64); err != nil {
+		common.PrintFlagsError(nodeCmd, "--timeout-gather-transactions", err)
+	}
+
+	if transactionsLimit, err = strconv.Atoi(flagTransactionsLimit); err != nil {
+		common.PrintFlagsError(nodeCmd, "--transactions-limit", err)
+	}
+
 	if signThreshold, err = strconv.Atoi(flagSIGNThreshold); err != nil {
 		common.PrintFlagsError(nodeCmd, "--sign-threshold", err)
 	}
+
 	if acceptThreshold, err = strconv.Atoi(flagACCEPTThreshold); err != nil {
 		common.PrintFlagsError(nodeCmd, "--accept-threshold", err)
 	}
@@ -238,6 +274,11 @@ func parseFlagsNode() {
 	parsedFlags = append(parsedFlags, "\n\tlog-output", flagLogOutput)
 	parsedFlags = append(parsedFlags, "\n\tsign-threshold", flagSIGNThreshold)
 	parsedFlags = append(parsedFlags, "\n\taccept-threshold", flagACCEPTThreshold)
+	parsedFlags = append(parsedFlags, "\n\ttimeout-init", flagTimeoutINIT)
+	parsedFlags = append(parsedFlags, "\n\ttimeout-sign", flagTimeoutSIGN)
+	parsedFlags = append(parsedFlags, "\n\ttimeout-accept", flagTimeoutACCEPT)
+	parsedFlags = append(parsedFlags, "\n\ttimeout-gather-transactions", flagTimeoutGatherTxs)
+	parsedFlags = append(parsedFlags, "\n\ttransactions-limit", flagTransactionsLimit)
 
 	var vl []interface{}
 	for i, v := range validators {
