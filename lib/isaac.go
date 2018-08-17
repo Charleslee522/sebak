@@ -8,7 +8,7 @@ import (
 	"boscoin.io/sebak/lib/node"
 )
 
-type RoundVoteResult map[ /* Node.Address() */ string]VotingHole
+type RoundVoteResult map[ /* Node.Address() */ string]sebakcommon.VotingHole
 
 type RoundVote struct {
 	SIGN   RoundVoteResult
@@ -67,24 +67,26 @@ func (rv *RoundVote) GetResult(state sebakcommon.BallotState) (result RoundVoteR
 	return result
 }
 
-func (rv *RoundVote) CanGetVotingResult(policy sebakcommon.VotingThresholdPolicy, state sebakcommon.BallotState) (RoundVoteResult, VotingHole, bool) {
-	threshold := policy.Threshold(state)
+func (rv *RoundVote) CanGetVotingResult(policy sebakcommon.VotingThresholdPolicy, state sebakcommon.BallotState, vote sebakcommon.VotingHole) (RoundVoteResult, sebakcommon.VotingHole, bool) {
+	threshold := policy.Threshold(state, vote)
 	if threshold < 1 {
-		return RoundVoteResult{}, VotingNOTYET, false
+		return RoundVoteResult{}, sebakcommon.VotingNOTYET, false
 	}
 
 	result := rv.GetResult(state)
 	if len(result) < int(threshold) {
-		return result, VotingNOTYET, false
+		return result, sebakcommon.VotingNOTYET, false
 	}
 
-	var yes int
-	var no int
-	for _, vh := range result {
-		if vh == VotingYES {
+	var yes, no, expired int
+	for _, votingHole := range result {
+		switch votingHole {
+		case sebakcommon.VotingYES:
 			yes++
-		} else if vh == VotingNO {
+		case sebakcommon.VotingNO:
 			no++
+		case sebakcommon.VotingEXPIRED:
+			expired++
 		}
 	}
 
@@ -93,24 +95,25 @@ func (rv *RoundVote) CanGetVotingResult(policy sebakcommon.VotingThresholdPolicy
 		"threshold", threshold,
 		"yes", yes,
 		"no", no,
+		"nil", nil,
 		"policy", policy,
 		"state", state,
 	)
 
 	if yes >= threshold {
-		return result, VotingYES, true
+		return result, sebakcommon.VotingYES, true
 	} else if no >= threshold {
-		return result, VotingNO, true
+		return result, sebakcommon.VotingNO, true
 	}
 
 	// check draw!
 	total := policy.Validators()
 	voted := yes + no
 	if total-voted < threshold-yes && total-voted < threshold-no { // draw
-		return result, VotingNO, true
+		return result, sebakcommon.VotingNO, true
 	}
 
-	return result, VotingNOTYET, false
+	return result, sebakcommon.VotingNOTYET, false
 }
 
 type RunningRound struct {
@@ -293,11 +296,11 @@ func (is *ISAAC) IsRunningRound(roundNumber uint64) bool {
 	return false
 }
 
-func (is *ISAAC) CloseConsensus(proposer string, round Round, vh VotingHole) (err error) {
+func (is *ISAAC) CloseConsensus(proposer string, round Round, vh sebakcommon.VotingHole) (err error) {
 	is.Lock()
 	defer is.Unlock()
 
-	if vh == VotingNOTYET {
+	if vh == sebakcommon.VotingNOTYET {
 		err = errors.New("invalid VotingHole, `VotingNOTYET`")
 		return
 	}
@@ -308,7 +311,7 @@ func (is *ISAAC) CloseConsensus(proposer string, round Round, vh VotingHole) (er
 		return
 	}
 
-	if vh == VotingNO {
+	if vh == sebakcommon.VotingNO {
 		delete(rr.Transactions, proposer)
 		delete(rr.Voted, proposer)
 

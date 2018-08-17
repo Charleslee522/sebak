@@ -53,7 +53,7 @@ func (vt *ISAACVotingThresholdPolicy) SetConnected(n int) error {
 	return nil
 }
 
-func (vt *ISAACVotingThresholdPolicy) Threshold(state sebakcommon.BallotState) int {
+func (vt *ISAACVotingThresholdPolicy) Threshold(state sebakcommon.BallotState, vh sebakcommon.VotingHole) int {
 	var t int
 	switch state {
 	case sebakcommon.BallotStateSIGN:

@@ -46,6 +46,8 @@ func TestIsaacSimulationProposer(t *testing.T) {
 
 	// Check that the transaction is in RunningRounds
 	rr := runningRounds[round.Hash()]
+	assert.NotNil(t, rr)
+
 	txHashs := rr.Transactions[proposer.Address()]
 	assert.Equal(t, tx.GetHash(), txHashs[0])
 
@@ -109,11 +111,11 @@ func getTransaction(t *testing.T) (tx Transaction, txByte []byte) {
 
 func generateBallot(t *testing.T, proposer *sebaknode.LocalNode, round Round, tx Transaction, ballotState sebakcommon.BallotState, sender *sebaknode.LocalNode) *Ballot {
 	ballot := NewBallot(proposer, round, []string{tx.GetHash()})
-	ballot.SetVote(sebakcommon.BallotStateINIT, VotingYES)
+	ballot.SetVote(sebakcommon.BallotStateINIT, sebakcommon.VotingYES)
 	ballot.Sign(proposer.Keypair(), networkID)
 
 	ballot.SetSource(sender.Address())
-	ballot.SetVote(ballotState, VotingYES)
+	ballot.SetVote(ballotState, sebakcommon.VotingYES)
 	ballot.Sign(sender.Keypair(), networkID)
 
 	err := ballot.IsWellFormed(networkID)

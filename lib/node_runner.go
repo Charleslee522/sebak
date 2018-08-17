@@ -303,7 +303,7 @@ func (nr *NodeRunner) handleBallotMessage(message sebaknetwork.Message) (err err
 		NetworkID:      nr.networkID,
 		Message:        message,
 		Log:            nr.Log(),
-		VotingHole:     VotingNOTYET,
+		VotingHole:     sebakcommon.VotingNOTYET,
 	}
 	err = sebakcommon.RunChecker(baseChecker, nr.handleMessageCheckerDeferFunc)
 	if err != nil {
@@ -468,7 +468,7 @@ func (nr *NodeRunner) ProposeNewBallot(roundNumber uint64) error {
 		NetworkID:      nr.networkID,
 		Transactions:   availableTransactions,
 		CheckAll:       true,
-		VotingHole:     VotingNOTYET,
+		VotingHole:     sebakcommon.VotingNOTYET,
 	}
 
 	{
@@ -480,7 +480,7 @@ func (nr *NodeRunner) ProposeNewBallot(roundNumber uint64) error {
 	}
 
 	ballot := NewBallot(nr.localNode, round, transactionsChecker.ValidTransactions)
-	ballot.SetVote(sebakcommon.BallotStateINIT, VotingYES)
+	ballot.SetVote(sebakcommon.BallotStateINIT, sebakcommon.VotingYES)
 	ballot.Sign(nr.localNode.Keypair(), nr.networkID)
 
 	nr.log.Debug("new ballot created", "ballot", ballot)

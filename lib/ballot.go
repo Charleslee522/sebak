@@ -27,7 +27,13 @@ func NewBallot(localNode *sebaknode.LocalNode, round Round, transactions []strin
 			Transactions: transactions,
 		},
 		State: sebakcommon.BallotStateINIT,
+		Vote:  sebakcommon.VotingNOTYET,
 	}
+
+	if len(transactions) < 1 {
+		body.Vote = sebakcommon.VotingEXPIRED
+	}
+
 	b = &Ballot{
 		H: BallotHeader{},
 		B: body,
@@ -103,7 +109,7 @@ func (b Ballot) ProposerConfirmed() string {
 	return b.B.Proposed.Confirmed
 }
 
-func (b Ballot) Vote() VotingHole {
+func (b Ballot) Vote() sebakcommon.VotingHole {
 	return b.B.Vote
 }
 
@@ -111,7 +117,7 @@ func (b *Ballot) SetSource(source string) {
 	b.B.Source = source
 }
 
-func (b *Ballot) SetVote(state sebakcommon.BallotState, vote VotingHole) {
+func (b *Ballot) SetVote(state sebakcommon.BallotState, vote sebakcommon.VotingHole) {
 	b.B.State = state
 	b.B.Vote = vote
 }
@@ -194,7 +200,7 @@ type BallotBody struct {
 	Proposed  BallotBodyProposed      `json:"proposed"`
 	Source    string                  `json:"source"`
 	State     sebakcommon.BallotState `json:"state"`
-	Vote      VotingHole              `json:"vote"`
+	Vote      sebakcommon.VotingHole  `json:"vote"`
 	Reason    *sebakerror.Error       `json:"reason"`
 }
 
