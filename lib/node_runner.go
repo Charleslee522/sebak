@@ -27,7 +27,7 @@ var (
 	TimeoutProposeNewBallot                      time.Duration = time.Second * 2
 	TimeoutProposeNewBallotFull                  time.Duration = time.Second * 1
 	MaxTransactionsInBallot                      int           = 1000
-	INITBallotProposerConfirmedTimeAllowDuration time.Duration = time.Minute * 1
+	INITBallotProposerConfirmedTimeAllowDuration time.Duration = time.Minute * 10
 )
 
 var DefaultHandleMessageFromClientCheckerFuncs = []sebakcommon.CheckerFunc{
