@@ -14,8 +14,9 @@ import (
 )
 
 var (
-	kp      *keypair.Full
-	account *BlockAccount
+	kp           *keypair.Full
+	account      *BlockAccount
+	genesisBlock Block
 )
 
 func init() {
@@ -53,7 +54,7 @@ func createTestNodeRunner(n int) []*NodeRunner {
 		st, _ := sebakstorage.NewTestMemoryLevelDBBackend()
 
 		account.Save(st)
-		MakeGenesisBlock(st, *account)
+		genesisBlock = MakeGenesisBlock(st, *account)
 
 		nr, err := NewNodeRunner(string(networkID), v, p, ns[i], is, st)
 		if err != nil {
