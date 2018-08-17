@@ -24,22 +24,25 @@ func TestIsaacSimulationProposer(t *testing.T) {
 	nodeRunner.SetProposerCalculator(SelfProposerCalculator{})
 	proposer := nodeRunner.localNode
 
+	nodeRunner.Consensus().SetLatestConsensusedBlock(genesisBlock)
+
 	var err error
 	err = nodeRunner.handleMessageFromClient(message)
+
 	assert.Nil(t, err)
 	assert.True(t, nodeRunner.Consensus().TransactionPool.Has(tx.GetHash()))
 
 	// Generate proposed ballot in nodeRunner
-	err = nodeRunner.ProposeNewBallot(0)
+	roundNumber := uint64(0)
+	err = nodeRunner.ProposeNewBallot(roundNumber)
 	assert.Nil(t, err)
-	runningRounds := nodeRunner.Consensus().RunningRounds
-
 	round := Round{
-		Number:      0,
-		BlockHeight: 0,
-		BlockHash:   "",
-		TotalTxs:    0,
+		Number:      roundNumber,
+		BlockHeight: nodeRunner.Consensus().LatestConfirmedBlock.Height,
+		BlockHash:   nodeRunner.Consensus().LatestConfirmedBlock.Hash,
+		TotalTxs:    nodeRunner.Consensus().LatestConfirmedBlock.TotalTxs,
 	}
+	runningRounds := nodeRunner.Consensus().RunningRounds
 
 	// Check that the transaction is in RunningRounds
 	rr := runningRounds[round.Hash()]
