@@ -67,7 +67,7 @@ var DefaultHandleACCEPTBallotCheckerFuncs = []sebakcommon.CheckerFunc{
 }
 
 type ProposerCalculator interface {
-	CalculateProposer(nr *NodeRunner, blockHeight uint64, roundNumber uint64) string
+	Calculate(nr *NodeRunner, blockHeight uint64, roundNumber uint64) string
 }
 
 type NodeRunner struct {
@@ -137,7 +137,7 @@ func NewNodeRunner(
 type SimpleProposerCalculator struct {
 }
 
-func (c SimpleProposerCalculator) CalculateProposer(nr *NodeRunner, blockHeight uint64, roundNumber uint64) string {
+func (c SimpleProposerCalculator) Calculate(nr *NodeRunner, blockHeight uint64, roundNumber uint64) string {
 	candidates := sort.StringSlice(nr.connectionManager.RoundCandidates())
 	candidates.Sort()
 
@@ -391,7 +391,7 @@ func (nr *NodeRunner) startRound() {
 }
 
 func (nr *NodeRunner) CalculateProposer(blockHeight uint64, roundNumber uint64) string {
-	return nr.proposerCalculator.CalculateProposer(nr, blockHeight, roundNumber)
+	return nr.proposerCalculator.Calculate(nr, blockHeight, roundNumber)
 }
 
 func (nr *NodeRunner) StartNewRound(roundNumber uint64) {

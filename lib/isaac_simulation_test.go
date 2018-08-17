@@ -12,7 +12,7 @@ import (
 )
 
 func TestIsaacSimulationProposer(t *testing.T) {
-	nodeRunners := CreateTestNodeRunner(5)
+	nodeRunners := createTestNodeRunner(5)
 
 	tx, txByte := getTransaction(t)
 

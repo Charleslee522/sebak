@@ -9,12 +9,12 @@ import (
 type SelfProposerCalculator struct {
 }
 
-func (c SelfProposerCalculator) CalculateProposer(nr *NodeRunner, _ uint64, _ uint64) string {
+func (c SelfProposerCalculator) Calculate(nr *NodeRunner, _ uint64, _ uint64) string {
 	return nr.localNode.Address()
 }
 
 func TestProposerCalculator(t *testing.T) {
-	nodeRunners := CreateTestNodeRunner(1)
+	nodeRunners := createTestNodeRunner(1)
 
 	nodeRunner := nodeRunners[0]
 	nodeRunner.SetProposerCalculator(SelfProposerCalculator{})
