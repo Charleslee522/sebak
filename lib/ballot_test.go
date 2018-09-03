@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"boscoin.io/sebak/lib/error"
+	"boscoin.io/sebak/lib/round"
 )
 
 func TestErrorBallotHasOverMaxTransactionsInBallot(t *testing.T) {
@@ -17,7 +18,7 @@ func TestErrorBallotHasOverMaxTransactionsInBallot(t *testing.T) {
 	MaxTransactionsInBallot = 2
 
 	_, node := createNetMemoryNetwork()
-	round := Round{Number: 0, BlockHeight: 1, BlockHash: "hahaha", TotalTxs: 1}
+	round := round.Round{Number: 0, BlockHeight: 1, BlockHash: "hahaha", TotalTxs: 1}
 	_, tx := TestMakeTransaction(networkID, 1)
 
 	ballot := NewBallot(node, round, []string{tx.GetHash()})
@@ -43,7 +44,7 @@ func TestBallotHash(t *testing.T) {
 
 	nodeRunner := nodeRunners[0]
 
-	round := Round{
+	round := round.Round{
 		Number:      0,
 		BlockHeight: nodeRunner.Consensus().LatestConfirmedBlock.Height,
 		BlockHash:   nodeRunner.Consensus().LatestConfirmedBlock.Hash,
