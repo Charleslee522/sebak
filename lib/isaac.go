@@ -2,118 +2,13 @@ package sebak
 
 import (
 	"errors"
+	"sort"
 
 	"boscoin.io/sebak/lib/common"
+	"boscoin.io/sebak/lib/network"
 	"boscoin.io/sebak/lib/node"
 	"boscoin.io/sebak/lib/round"
 )
-
-type TransactionPool struct {
-	sebakcommon.SafeLock
-
-	Pool    map[ /* Transaction.GetHash() */ string]Transaction
-	Hashes  []string // Transaction.GetHash()
-	Sources map[ /* Transaction.Source() */ string]bool
-}
-
-func NewTransactionPool() *TransactionPool {
-	return &TransactionPool{
-		Pool:    map[string]Transaction{},
-		Hashes:  []string{},
-		Sources: map[string]bool{},
-	}
-}
-
-func (tp *TransactionPool) Len() int {
-	return len(tp.Hashes)
-}
-
-func (tp *TransactionPool) Has(hash string) bool {
-	_, found := tp.Pool[hash]
-	return found
-}
-
-func (tp *TransactionPool) Get(hash string) (tx Transaction, found bool) {
-	tx, found = tp.Pool[hash]
-	return
-}
-
-func (tp *TransactionPool) Add(tx Transaction) bool {
-	if _, found := tp.Pool[tx.GetHash()]; found {
-		return false
-	}
-
-	tp.Lock()
-	defer tp.Unlock()
-
-	tp.Pool[tx.GetHash()] = tx
-	tp.Hashes = append(tp.Hashes, tx.GetHash())
-	tp.Sources[tx.Source()] = true
-
-	return true
-}
-
-func (tp *TransactionPool) Remove(hashes ...string) {
-	if len(hashes) < 1 {
-		return
-	}
-
-	tp.Lock()
-	defer tp.Unlock()
-
-	indices := map[int]int{}
-	var max int
-	for _, hash := range hashes {
-		index, found := sebakcommon.InStringArray(tp.Hashes, hash)
-		if !found {
-			continue
-		}
-		indices[index] = 1
-		if index > max {
-			max = index
-		}
-
-		if tx, found := tp.Get(hash); found {
-			delete(tp.Sources, tx.Source())
-		}
-	}
-
-	var newHashes []string
-	for i, hash := range tp.Hashes {
-		if i > max {
-			newHashes = append(newHashes, hash)
-			continue
-		}
-
-		if _, found := indices[i]; !found {
-			newHashes = append(newHashes, hash)
-			continue
-		}
-
-		delete(tp.Pool, hash)
-	}
-
-	tp.Hashes = newHashes
-
-	return
-}
-
-func (tp *TransactionPool) AvailableTransactions(conf *IsaacConfiguration) []string {
-	tp.Lock()
-	defer tp.Unlock()
-
-	if tp.Len() <= int(conf.TransactionsLimit) {
-		return tp.Hashes
-	}
-
-	return tp.Hashes[:conf.TransactionsLimit]
-}
-
-func (tp *TransactionPool) IsSameSource(source string) (found bool) {
-	_, found = tp.Sources[source]
-
-	return
-}
 
 type ISAAC struct {
 	sebakcommon.SafeLock
@@ -122,9 +17,11 @@ type ISAAC struct {
 	Node                  *sebaknode.LocalNode
 	VotingThresholdPolicy sebakcommon.VotingThresholdPolicy
 	TransactionPool       *TransactionPool
-	RunningRounds         map[ /* Round.Hash() */ string]*RunningRound
+	runningRounds         map[ /* Round.Hash() */ string]*RunningRound
 	LatestConfirmedBlock  Block
 	LatestRound           round.Round
+	proposerCalculator    ProposerCalculator
+	connectionManager     *sebaknetwork.ConnectionManager
 }
 
 func NewISAAC(networkID []byte, node *sebaknode.LocalNode, votingThresholdPolicy sebakcommon.VotingThresholdPolicy) (is *ISAAC, err error) {
@@ -133,7 +30,7 @@ func NewISAAC(networkID []byte, node *sebaknode.LocalNode, votingThresholdPolicy
 		Node:      node,
 		VotingThresholdPolicy: votingThresholdPolicy,
 		TransactionPool:       NewTransactionPool(),
-		RunningRounds:         map[string]*RunningRound{},
+		runningRounds:         map[string]*RunningRound{},
 	}
 
 	return
@@ -149,7 +46,7 @@ func (is *ISAAC) CloseConsensus(proposer string, round round.Round, vh sebakcomm
 	}
 
 	roundHash := round.Hash()
-	rr, found := is.RunningRounds[roundHash]
+	rr, found := is.runningRounds[roundHash]
 	if !found {
 		return
 	}
@@ -163,17 +60,21 @@ func (is *ISAAC) CloseConsensus(proposer string, round round.Round, vh sebakcomm
 
 	is.TransactionPool.Remove(rr.Transactions[proposer]...)
 
-	delete(is.RunningRounds, roundHash)
+	delete(is.runningRounds, roundHash)
 
 	// remove all the same rounds
-	for hash, runningRound := range is.RunningRounds {
+	for hash, runningRound := range is.runningRounds {
 		if runningRound.Round.BlockHeight > round.BlockHeight {
 			continue
 		}
-		delete(is.RunningRounds, hash)
+		delete(is.runningRounds, hash)
 	}
 
 	return
+}
+
+func (is *ISAAC) SetConnectionManager(cm *sebaknetwork.ConnectionManager) {
+	is.connectionManager = cm
 }
 
 func (is *ISAAC) SetLatestConsensusedBlock(block Block) {
@@ -209,4 +110,91 @@ func (is *ISAAC) IsAvailableRound(round round.Round) bool {
 	}
 
 	return true
+}
+
+func (is *ISAAC) IsVoted(ballot Ballot) bool {
+	rr := is.runningRounds
+
+	var found bool
+	var runningRound *RunningRound
+	if runningRound, found = rr[ballot.Round().Hash()]; !found {
+		return false
+	}
+
+	return runningRound.IsVoted(ballot)
+}
+
+func (is *ISAAC) GetVotedProposer(ballot Ballot) (proposer string, found bool) {
+	rr := is.runningRounds
+	var runningRound *RunningRound
+	if runningRound, found = rr[ballot.Round().Hash()]; !found {
+		return
+	}
+	return runningRound.Proposer, found
+}
+
+func (is *ISAAC) VoteIfRunningRoundExists(ballot Ballot) (found bool) {
+	rr := is.runningRounds
+
+	var runningRound *RunningRound
+	if runningRound, found = rr[ballot.Round().Hash()]; !found {
+		return
+	}
+
+	runningRound.Vote(ballot)
+
+	return
+}
+
+func (is *ISAAC) Vote(ballot Ballot) (isNew bool, roundVote *RoundVote, err error) {
+	roundHash := ballot.Round().Hash()
+	rr := is.runningRounds
+
+	var found bool
+	var runningRound *RunningRound
+	if runningRound, found = rr[roundHash]; !found {
+		proposer := is.CalculateProposer(
+			ballot.Round().BlockHeight,
+			ballot.Round().Number,
+		)
+
+		runningRound, err = NewRunningRound(proposer, ballot)
+		if err != nil {
+			return
+		}
+
+		rr[roundHash] = runningRound
+		isNew = true
+	} else {
+		if _, found = runningRound.Voted[ballot.Proposer()]; !found {
+			isNew = true
+		}
+
+		runningRound.Vote(ballot)
+	}
+
+	roundVote, err = runningRound.RoundVote(ballot.Proposer())
+
+	return
+}
+
+func (is *ISAAC) SetProposerCalculator(c ProposerCalculator) {
+	is.proposerCalculator = c
+}
+
+func (is *ISAAC) CalculateProposer(blockHeight uint64, roundNumber uint64) string {
+	return is.proposerCalculator.Calculate(is.connectionManager, blockHeight, roundNumber)
+}
+
+type ProposerCalculator interface {
+	Calculate(cm *sebaknetwork.ConnectionManager, blockHeight uint64, roundNumber uint64) string
+}
+
+type SimpleProposerCalculator struct{}
+
+func (c SimpleProposerCalculator) Calculate(cm *sebaknetwork.ConnectionManager, blockHeight uint64, roundNumber uint64) string {
+	candidates := sort.StringSlice(cm.AllValidators())
+	candidates.Sort()
+
+	return candidates[(blockHeight+roundNumber)%uint64(len(candidates))]
 }

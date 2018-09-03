@@ -10,7 +10,6 @@ package sebak
 import (
 	"context"
 	"errors"
-	"sort"
 	"time"
 
 	logging "github.com/inconshreveable/log15"
@@ -64,10 +63,6 @@ var DefaultHandleACCEPTBallotCheckerFuncs = []sebakcommon.CheckerFunc{
 	FinishedBallotStore,
 }
 
-type ProposerCalculator interface {
-	Calculate(nr *NodeRunner, blockHeight uint64, roundNumber uint64) string
-}
-
 type NodeRunner struct {
 	networkID              []byte
 	localNode              *sebaknode.LocalNode
@@ -76,7 +71,6 @@ type NodeRunner struct {
 	consensus              *ISAAC
 	connectionManager      *sebaknetwork.ConnectionManager
 	storage                *sebakstorage.LevelDBBackend
-	proposerCalculator     ProposerCalculator
 	nodeRunnerStateManager *IsaacStateManager
 
 	handleMessageFromClientCheckerFuncs []sebakcommon.CheckerFunc
@@ -135,18 +129,8 @@ func NewNodeRunner(
 	return
 }
 
-type SimpleProposerCalculator struct {
-}
-
-func (c SimpleProposerCalculator) Calculate(nr *NodeRunner, blockHeight uint64, roundNumber uint64) string {
-	candidates := sort.StringSlice(nr.connectionManager.AllValidators())
-	candidates.Sort()
-
-	return candidates[(blockHeight+roundNumber)%uint64(len(candidates))]
-}
-
 func (nr *NodeRunner) SetProposerCalculator(c ProposerCalculator) {
-	nr.proposerCalculator = c
+	nr.Consensus().SetProposerCalculator(c)
 }
 
 func (nr *NodeRunner) SetConf(conf *IsaacConfiguration) {
@@ -409,17 +393,13 @@ func (nr *NodeRunner) InitRound() {
 
 func (nr *NodeRunner) StartStateManager() {
 	// check whether current running rounds exist
-	if len(nr.consensus.RunningRounds) > 0 {
+	if len(nr.consensus.runningRounds) > 0 {
 		return
 	}
 
 	go nr.nodeRunnerStateManager.Start()
 	nr.nodeRunnerStateManager.ResetRound()
 	return
-}
-
-func (nr *NodeRunner) CalculateProposer(blockHeight uint64, roundNumber uint64) string {
-	return nr.proposerCalculator.Calculate(nr, blockHeight, roundNumber)
 }
 
 func (nr *NodeRunner) TransitIsaacState(round round.Round, ballotState sebakcommon.BallotState) {
@@ -469,7 +449,7 @@ func (nr *NodeRunner) proposeNewBallot(roundNumber uint64) error {
 	if err != nil {
 		return err
 	}
-	rr := nr.consensus.RunningRounds
+	rr := nr.consensus.runningRounds
 	rr[round.Hash()] = runningRound
 
 	nr.Log().Debug("ballot broadcasted and voted", "runningRound", runningRound)

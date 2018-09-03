@@ -197,17 +197,8 @@ func BallotAlreadyFinished(c sebakcommon.Checker, args ...interface{}) (err erro
 // BallotAlreadyVoted checks the node of ballot voted.
 func BallotAlreadyVoted(c sebakcommon.Checker, args ...interface{}) (err error) {
 	checker := c.(*BallotChecker)
-	rr := checker.NodeRunner.Consensus().RunningRounds
-
-	var found bool
-	var runningRound *RunningRound
-	if runningRound, found = rr[checker.Ballot.Round().Hash()]; !found {
-		return
-	}
-
-	if runningRound.IsVoted(checker.Ballot) {
+	if checker.NodeRunner.Consensus().IsVoted(checker.Ballot) {
 		err = sebakerror.ErrorBallotAlreadyVoted
-		return
 	}
 
 	return
@@ -219,40 +210,7 @@ func BallotAlreadyVoted(c sebakcommon.Checker, args ...interface{}) (err error) 
 func BallotVote(c sebakcommon.Checker, args ...interface{}) (err error) {
 	checker := c.(*BallotChecker)
 
-	roundHash := checker.Ballot.Round().Hash()
-	rr := checker.NodeRunner.Consensus().RunningRounds
-
-	var isNew bool
-	var found bool
-	var runningRound *RunningRound
-	if runningRound, found = rr[roundHash]; !found {
-		proposer := checker.NodeRunner.CalculateProposer(
-			checker.Ballot.Round().BlockHeight,
-			checker.Ballot.Round().Number,
-		)
-
-		runningRound, err = NewRunningRound(proposer, checker.Ballot)
-		if err != nil {
-			return
-		}
-
-		rr[roundHash] = runningRound
-		isNew = true
-	} else {
-		if _, found = runningRound.Voted[checker.Ballot.Proposer()]; !found {
-			isNew = true
-		}
-
-		runningRound.Vote(checker.Ballot)
-	}
-
-	checker.IsNew = isNew
-	checker.RoundVote, err = runningRound.RoundVote(checker.Ballot.Proposer())
-	if err != nil {
-		return
-	}
-
-	checker.Log.Debug("ballot voted", "runningRound", runningRound, "new", isNew)
+	checker.IsNew, checker.RoundVote, err = checker.NodeRunner.Consensus().Vote(checker.Ballot)
 
 	return
 }
@@ -270,22 +228,17 @@ func BallotIsSameProposer(c sebakcommon.Checker, args ...interface{}) (err error
 		return
 	}
 
-	rr := checker.NodeRunner.Consensus().RunningRounds
-	var runningRound *RunningRound
-	var found bool
-	if runningRound, found = rr[checker.Ballot.Round().Hash()]; !found {
+	if proposer, found := checker.NodeRunner.Consensus().GetVotedProposer(checker.Ballot); !found {
 		err = errors.New("`RunningRound` not found")
-		return
-	}
-
-	if runningRound.Proposer != checker.Ballot.Proposer() {
-		checker.VotingHole = sebakcommon.VotingNO
-		checker.Log.Debug(
-			"ballot has different proposer",
-			"proposer", runningRound.Proposer,
-			"proposed-proposer", checker.Ballot.Proposer(),
-		)
-		return
+	} else {
+		if proposer != checker.Ballot.Proposer() {
+			checker.VotingHole = sebakcommon.VotingNO
+			checker.Log.Debug(
+				"ballot has different proposer",
+				"proposer", proposer,
+				"proposed-proposer", checker.Ballot.Proposer(),
+			)
+		}
 	}
 
 	return
@@ -386,15 +339,9 @@ func SIGNBallotBroadcast(c sebakcommon.Checker, args ...interface{}) (err error)
 	newBallot.SetVote(sebakcommon.BallotStateSIGN, checker.VotingHole)
 	newBallot.Sign(checker.LocalNode.Keypair(), checker.NetworkID)
 
-	rr := checker.NodeRunner.Consensus().RunningRounds
-
-	var runningRound *RunningRound
-	var found bool
-	if runningRound, found = rr[checker.Ballot.Round().Hash()]; !found {
-		err = errors.New("RunningRound not found")
-		return
+	if found := checker.NodeRunner.Consensus().VoteIfRunningRoundExists(newBallot); !found {
+		err = errors.New("`RunningRound` not found")
 	}
-	runningRound.Vote(newBallot)
 
 	checker.NodeRunner.ConnectionManager().Broadcast(newBallot)
 	checker.Log.Debug("ballot will be broadcasted", "newBallot", newBallot)
@@ -425,14 +372,10 @@ func ACCEPTBallotBroadcast(c sebakcommon.Checker, args ...interface{}) (err erro
 	newBallot.SetVote(sebakcommon.BallotStateACCEPT, checker.FinishedVotingHole)
 	newBallot.Sign(checker.LocalNode.Keypair(), checker.NetworkID)
 
-	rr := checker.NodeRunner.Consensus().RunningRounds
-	var runningRound *RunningRound
-	var found bool
-	if runningRound, found = rr[checker.Ballot.Round().Hash()]; !found {
+	if found := checker.NodeRunner.Consensus().VoteIfRunningRoundExists(newBallot); !found {
 		err = errors.New("RunningRound not found")
 		return
 	}
-	runningRound.Vote(newBallot)
 
 	checker.NodeRunner.ConnectionManager().Broadcast(newBallot)
 	checker.Log.Debug("ballot will be broadcasted", "newBallot", newBallot)

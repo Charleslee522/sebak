@@ -54,7 +54,7 @@ func TestIsaacSimulationProposer(t *testing.T) {
 		BlockHash:   nodeRunner.Consensus().LatestConfirmedBlock.Hash,
 		TotalTxs:    nodeRunner.Consensus().LatestConfirmedBlock.TotalTxs,
 	}
-	runningRounds := nodeRunner.Consensus().RunningRounds
+	runningRounds := nodeRunner.Consensus().runningRounds
 
 	// Check that the transaction is in RunningRounds
 	rr := runningRounds[round.Hash()]

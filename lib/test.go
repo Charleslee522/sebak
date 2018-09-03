@@ -176,16 +176,16 @@ func TestMakeTransactionWithKeypair(networkID []byte, n int, srcKp *keypair.Full
 type SelfProposerCalculator struct {
 }
 
-func (c SelfProposerCalculator) Calculate(nr *NodeRunner, _ uint64, _ uint64) string {
-	return nr.localNode.Address()
+func (c SelfProposerCalculator) Calculate(cm *sebaknetwork.ConnectionManager, _ uint64, _ uint64) string {
+	return cm.GetLocalNodeAddress()
 }
 
 type TheOtherProposerCalculator struct {
 }
 
-func (c TheOtherProposerCalculator) Calculate(nr *NodeRunner, _ uint64, _ uint64) string {
-	for _, v := range nr.ConnectionManager().AllValidators() {
-		if v != nr.localNode.Address() {
+func (c TheOtherProposerCalculator) Calculate(cm *sebaknetwork.ConnectionManager, _ uint64, _ uint64) string {
+	for _, v := range cm.AllValidators() {
+		if v != cm.GetLocalNodeAddress() {
 			return v
 		}
 	}
@@ -195,12 +195,12 @@ func (c TheOtherProposerCalculator) Calculate(nr *NodeRunner, _ uint64, _ uint64
 type SelfProposerThenNotProposer struct {
 }
 
-func (c *SelfProposerThenNotProposer) Calculate(nr *NodeRunner, blockHeight uint64, roundNumber uint64) string {
+func (c SelfProposerThenNotProposer) Calculate(cm *sebaknetwork.ConnectionManager, blockHeight uint64, roundNumber uint64) string {
 	if blockHeight < 2 && roundNumber == 0 {
-		return nr.localNode.Address()
+		return cm.GetLocalNodeAddress()
 	} else {
-		for _, v := range nr.ConnectionManager().AllValidators() {
-			if v != nr.localNode.Address() {
+		for _, v := range cm.AllValidators() {
+			if v != cm.GetLocalNodeAddress() {
 				return v
 			}
 		}

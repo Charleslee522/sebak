@@ -102,7 +102,7 @@ func (sm *IsaacStateManager) Start() {
 		case state := <-sm.stateTransit:
 			switch state.ballotState {
 			case sebakcommon.BallotStateINIT:
-				proposer := sm.nr.CalculateProposer(state.round.BlockHeight, state.round.Number)
+				proposer := sm.nr.Consensus().CalculateProposer(state.round.BlockHeight, state.round.Number)
 				log.Debug("calculated proposer", "proposer", proposer)
 
 				if proposer == sm.nr.localNode.Address() {

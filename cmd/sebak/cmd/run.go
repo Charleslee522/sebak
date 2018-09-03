@@ -336,6 +336,7 @@ func runNode() error {
 	var g run.Group
 	{
 		nr, err := sebak.NewNodeRunner(flagNetworkID, localNode, policy, nt, isaac, st)
+		isaac.SetConnectionManager(nr.ConnectionManager())
 		conf := &sebak.IsaacConfiguration{
 			TimeoutINIT:       timeoutINIT,
 			TimeoutSIGN:       timeoutSIGN,

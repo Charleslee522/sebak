@@ -67,6 +67,7 @@ func createTestNodeRunner(n int) []*NodeRunner {
 		if err != nil {
 			panic(err)
 		}
+		is.SetConnectionManager(nr.connectionManager)
 		nodeRunners = append(nodeRunners, nr)
 	}
 
@@ -156,6 +157,8 @@ func createTestNodeRunnersHTTP2Network(n int) (nodeRunners []*NodeRunner, rootKP
 		networkConfig, _ := sebaknetwork.NewHTTP2NetworkConfigFromEndpoint(node.Endpoint())
 		network := sebaknetwork.NewHTTP2Network(networkConfig)
 		nodeRunner, _ := NewNodeRunner(string(networkID), node, vth, network, is, st)
+
+		is.SetConnectionManager(nodeRunner.connectionManager)
 
 		genesisAccount.Save(nodeRunner.Storage())
 		MakeGenesisBlock(st, *genesisAccount)

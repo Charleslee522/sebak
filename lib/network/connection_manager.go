@@ -77,6 +77,10 @@ func (c *ConnectionManager) GetConnection(address string) (client NetworkClient)
 	return
 }
 
+func (c *ConnectionManager) GetLocalNodeAddress() string {
+	return c.localNode.Address()
+}
+
 func (c *ConnectionManager) Start() {
 	go c.connectValidators()
 }
