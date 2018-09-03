@@ -240,9 +240,9 @@ func TestStateSIGNTimeoutNotProposer(t *testing.T) {
 // 1. All 3 Nodes.
 // 2. Proposer itself at round 0.
 // 3. When `NodeRunnerStateManager` starts, the node proposes a ballot.
-// 6. NodeRunnerState is changed to `SIGN`.
-// 7. TimeoutSIGN is a millisecond.
-// 8. After milliseconds, the node broadcasts B(`ACCEPT`, `EXP`).
+// 4. NodeRunnerState is changed to `SIGN`.
+// 5. TimeoutSIGN is a millisecond.
+// 6. After milliseconds, the node broadcasts B(`ACCEPT`, `EXP`).
 func TestStateACCEPTTimeoutProposerThenNotProposer(t *testing.T) {
 	nodeRunners := createTestNodeRunner(3)
 

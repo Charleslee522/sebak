@@ -10,14 +10,13 @@ import (
 )
 
 type NodeRunnerStateManager struct {
-	nr            *NodeRunner
-	state         NodeRunnerState
-	conf          *NodeRunnerConfiguration
-	stateTransit  chan NodeRunnerState
-	increaseRound chan bool
-	resetRound    chan bool
-	stop          chan bool
-	on            bool
+	nr           *NodeRunner
+	state        NodeRunnerState
+	conf         *NodeRunnerConfiguration
+	stateTransit chan NodeRunnerState
+	resetRound   chan bool
+	stop         chan bool
+	on           bool
 }
 
 func NewNodeRunnerStateManager(nr *NodeRunner) *NodeRunnerStateManager {
@@ -26,7 +25,6 @@ func NewNodeRunnerStateManager(nr *NodeRunner) *NodeRunnerStateManager {
 		nr:   nr,
 	}
 	p.stateTransit = make(chan NodeRunnerState)
-	p.increaseRound = make(chan bool)
 	p.resetRound = make(chan bool)
 	p.stop = make(chan bool)
 	p.on = false
@@ -65,10 +63,10 @@ func (sm *NodeRunnerStateManager) TransitNodeRunnerState(round Round, ballotStat
 	}()
 }
 
-func (sm *NodeRunnerStateManager) IncreaseRound() {
-	go func() {
-		sm.increaseRound <- true
-	}()
+func (sm *NodeRunnerStateManager) increaseRound() {
+	round := sm.state.round
+	round.Number++
+	sm.TransitNodeRunnerState(round, sebakcommon.BallotStateINIT)
 }
 
 func (sm *NodeRunnerStateManager) ResetRound() {
@@ -99,25 +97,25 @@ func (sm *NodeRunnerStateManager) Start() {
 		select {
 		case <-timer.C:
 			if sm.state.ballotState == sebakcommon.BallotStateACCEPT {
-				sm.IncreaseRound()
+				sm.increaseRound()
 				break
 			}
 			go sm.broadcastExpiredBallot(sm.state)
-			sm.TransitNodeRunnerState(sm.state.round, sm.state.ballotState.Next())
+			sm.state.ballotState = sm.state.ballotState.Next()
 		case sm.state = <-sm.stateTransit:
 			switch sm.state.ballotState {
 			case sebakcommon.BallotStateINIT:
-				timer.Reset(oneHour)
 				proposer := sm.nr.CalculateProposer(sm.state.round.BlockHeight, sm.state.round.Number)
 				log.Debug("calculated proposer", "proposer", proposer)
 
 				if proposer == sm.nr.localNode.Address() {
+					timer.Reset(oneHour)
 					if err := sm.nr.proposeNewBallot(sm.state.round.Number); err == nil {
 						log.Debug("propose new ballot", "proposer", proposer, "round", sm.state.round, "ballotState", sebakcommon.BallotStateSIGN)
-						sm.TransitNodeRunnerState(sm.state.round, sebakcommon.BallotStateSIGN)
+						sm.state.ballotState = sebakcommon.BallotStateSIGN
 					} else {
 						sm.nr.log.Error("failed to proposeNewBallot", "height", sm.nr.consensus.LatestConfirmedBlock.Height, "error", err)
-						sm.TransitNodeRunnerState(sm.state.round, sebakcommon.BallotStateINIT)
+						sm.state.ballotState = sebakcommon.BallotStateINIT
 					}
 				} else {
 					timer.Reset(sm.conf.TimeoutINIT)
@@ -131,10 +129,6 @@ func (sm *NodeRunnerStateManager) Start() {
 			case sebakcommon.BallotStateNONE:
 				timer.Reset(sm.conf.TimeoutINIT)
 			}
-		case <-sm.increaseRound:
-			round := sm.state.round
-			round.Number++
-			sm.TransitNodeRunnerState(round, sebakcommon.BallotStateINIT)
 		case <-sm.resetRound:
 			round := sm.state.round
 			round.BlockHeight++
