@@ -31,50 +31,17 @@ var DefaultHandleMessageFromClientCheckerFuncs = []sebakcommon.CheckerFunc{
 	BroadcastTransaction,
 }
 
-var DefaultHandleBaseBallotCheckerFuncs = []sebakcommon.CheckerFunc{
-	BallotUnmarshal,
-	BallotNotFromKnownValidators,
-	BallotAlreadyFinished,
-}
-
-var DefaultHandleINITBallotCheckerFuncs = []sebakcommon.CheckerFunc{
-	BallotAlreadyVoted,
-	BallotVote,
-	BallotIsSameProposer,
-	INITBallotValidateTransactions,
-	// SIGNBallotBroadcast,
-	// TransitStateToSIGN,
-}
-
-var DefaultHandleSIGNBallotCheckerFuncs = []sebakcommon.CheckerFunc{
-	BallotAlreadyVoted,
-	BallotVote,
-	BallotIsSameProposer,
-	// BallotCheckResult,
-	// ACCEPTBallotBroadcast,
-	// TransitStateToACCEPT,
-}
-
-var DefaultHandleACCEPTBallotCheckerFuncs = []sebakcommon.CheckerFunc{
-	BallotAlreadyVoted,
-	BallotVote,
-	BallotIsSameProposer,
-	// BallotCheckResult,
-	// FinishedBallotStore,
-}
-
 type NodeRunner struct {
-	networkID              []byte
-	localNode              *sebaknode.LocalNode
-	policy                 sebakcommon.VotingThresholdPolicy
-	network                sebaknetwork.Network
-	consensus              *ISAAC
-	connectionManager      *sebaknetwork.ConnectionManager
-	storage                *sebakstorage.LevelDBBackend
-	nodeRunnerStateManager *IsaacStateManager
+	networkID         []byte
+	localNode         *sebaknode.LocalNode
+	policy            sebakcommon.VotingThresholdPolicy
+	network           sebaknetwork.Network
+	consensus         *ISAAC
+	connectionManager *sebaknetwork.ConnectionManager
+	storage           *sebakstorage.LevelDBBackend
+	isaacStateManager *IsaacStateManager
 
 	handleMessageFromClientCheckerFuncs []sebakcommon.CheckerFunc
-	handleBaseBallotCheckerFuncs        []sebakcommon.CheckerFunc
 	handleINITBallotCheckerFuncs        []sebakcommon.CheckerFunc
 	handleSIGNBallotCheckerFuncs        []sebakcommon.CheckerFunc
 	handleACCEPTBallotCheckerFuncs      []sebakcommon.CheckerFunc
@@ -102,7 +69,7 @@ func NewNodeRunner(
 		storage:   storage,
 		log:       log.New(logging.Ctx{"node": localNode.Alias()}),
 	}
-	nr.nodeRunnerStateManager = NewIsaacStateManager(nr)
+	nr.isaacStateManager = NewIsaacStateManager(nr)
 	nr.ctx = context.WithValue(context.Background(), "localNode", localNode)
 	nr.ctx = context.WithValue(nr.ctx, "networkID", nr.networkID)
 	nr.ctx = context.WithValue(nr.ctx, "storage", nr.storage)
@@ -121,10 +88,6 @@ func NewNodeRunner(
 	nr.network.AddWatcher(nr.connectionManager.ConnectionWatcher)
 
 	nr.SetHandleMessageFromClientCheckerFuncs(DefaultHandleMessageFromClientCheckerFuncs...)
-	nr.SetHandleBaseBallotCheckerFuncs(DefaultHandleBaseBallotCheckerFuncs...)
-	nr.SetHandleINITBallotCheckerFuncs(DefaultHandleINITBallotCheckerFuncs...)
-	nr.SetHandleSIGNBallotCheckerFuncs(DefaultHandleSIGNBallotCheckerFuncs...)
-	nr.SetHandleACCEPTBallotCheckerFuncs(DefaultHandleACCEPTBallotCheckerFuncs...)
 
 	return
 }
@@ -134,7 +97,7 @@ func (nr *NodeRunner) SetProposerCalculator(c ProposerCalculator) {
 }
 
 func (nr *NodeRunner) SetConf(conf *IsaacConfiguration) {
-	nr.nodeRunnerStateManager.SetConf(conf)
+	nr.isaacStateManager.SetConf(conf)
 }
 
 func (nr *NodeRunner) SetBroadcastor(b sebaknetwork.Broadcastor) {
@@ -164,7 +127,7 @@ func (nr *NodeRunner) Start() (err error) {
 
 func (nr *NodeRunner) Stop() {
 	nr.network.Stop()
-	nr.nodeRunnerStateManager.Stop()
+	nr.isaacStateManager.Stop()
 }
 
 func (nr *NodeRunner) Node() *sebaknode.LocalNode {
@@ -219,23 +182,6 @@ func (nr *NodeRunner) ConnectValidators() {
 func (nr *NodeRunner) SetHandleMessageFromClientCheckerFuncs(f ...sebakcommon.CheckerFunc) {
 	nr.handleMessageFromClientCheckerFuncs = f
 }
-
-func (nr *NodeRunner) SetHandleBaseBallotCheckerFuncs(f ...sebakcommon.CheckerFunc) {
-	nr.handleBaseBallotCheckerFuncs = f
-}
-
-func (nr *NodeRunner) SetHandleINITBallotCheckerFuncs(f ...sebakcommon.CheckerFunc) {
-	nr.handleINITBallotCheckerFuncs = f
-}
-
-func (nr *NodeRunner) SetHandleSIGNBallotCheckerFuncs(f ...sebakcommon.CheckerFunc) {
-	nr.handleSIGNBallotCheckerFuncs = f
-}
-
-func (nr *NodeRunner) SetHandleACCEPTBallotCheckerFuncs(f ...sebakcommon.CheckerFunc) {
-	nr.handleACCEPTBallotCheckerFuncs = f
-}
-
 func (nr *NodeRunner) SetHandleMessageCheckerDeferFunc(f sebakcommon.CheckerDeferFunc) {
 	nr.handleMessageCheckerDeferFunc = f
 }
@@ -257,7 +203,7 @@ func (nr *NodeRunner) handleMessage() {
 		case sebaknetwork.MessageFromClient:
 			err = nr.handleMessageFromClient(message)
 		case sebaknetwork.BallotMessage:
-			err = nr.handleBallotMessage(message)
+			err = nr.Consensus().handleBallotMessage(message)
 		default:
 			err = errors.New("got unknown message")
 		}
@@ -287,65 +233,6 @@ func (nr *NodeRunner) handleMessageFromClient(message sebaknetwork.Message) (err
 			nr.log.Error("failed to handle message from client", "error", err)
 		}
 		return
-	}
-
-	return
-}
-
-func (nr *NodeRunner) handleBallotMessage(message sebaknetwork.Message) (err error) {
-	nr.log.Debug("got ballot", "message", message.Head(50))
-
-	baseChecker := &BallotChecker{
-		DefaultChecker: sebakcommon.DefaultChecker{nr.handleBaseBallotCheckerFuncs},
-		NodeRunner:     nr,
-		LocalNode:      nr.localNode,
-		NetworkID:      nr.networkID,
-		Message:        message,
-		Log:            nr.Log(),
-		VotingHole:     sebakcommon.VotingNOTYET,
-	}
-	err = sebakcommon.RunChecker(baseChecker, nr.handleMessageCheckerDeferFunc)
-	if err != nil {
-		if _, ok := err.(sebakcommon.CheckerErrorStop); !ok {
-			nr.log.Error("failed to handle ballot", "error", err, "state", "base")
-			return
-		}
-	}
-
-	var checkerFuncs []sebakcommon.CheckerFunc
-	switch baseChecker.Ballot.State() {
-	case sebakcommon.BallotStateINIT:
-		checkerFuncs = DefaultHandleINITBallotCheckerFuncs
-	case sebakcommon.BallotStateSIGN:
-		checkerFuncs = DefaultHandleSIGNBallotCheckerFuncs
-	case sebakcommon.BallotStateACCEPT:
-		checkerFuncs = DefaultHandleACCEPTBallotCheckerFuncs
-	}
-
-	checker := &BallotChecker{
-		DefaultChecker: sebakcommon.DefaultChecker{checkerFuncs},
-		NodeRunner:     nr,
-		LocalNode:      nr.localNode,
-		NetworkID:      nr.networkID,
-		Message:        message,
-		Ballot:         baseChecker.Ballot,
-		VotingHole:     baseChecker.VotingHole,
-		IsNew:          baseChecker.IsNew,
-		RoundVote:      baseChecker.RoundVote,
-		Log:            baseChecker.Log,
-	}
-	err = sebakcommon.RunChecker(checker, nr.handleMessageCheckerDeferFunc)
-	if err != nil {
-		if stopped, ok := err.(sebakcommon.CheckerStop); ok {
-			nr.log.Debug(
-				"stopped to handle ballot",
-				"state", baseChecker.Ballot.State(),
-				"reason", stopped.Error(),
-			)
-		} else {
-			nr.log.Error("failed to handle ballot", "error", err, "state", baseChecker.Ballot.State())
-			return
-		}
 	}
 
 	return
@@ -397,13 +284,13 @@ func (nr *NodeRunner) StartStateManager() {
 		return
 	}
 
-	go nr.nodeRunnerStateManager.Start()
-	nr.nodeRunnerStateManager.ResetRound()
+	go nr.isaacStateManager.Start()
+	nr.isaacStateManager.ResetRound()
 	return
 }
 
 func (nr *NodeRunner) TransitIsaacState(round round.Round, ballotState sebakcommon.BallotState) {
-	nr.nodeRunnerStateManager.TransitIsaacState(round, ballotState)
+	nr.isaacStateManager.TransitIsaacState(round, ballotState)
 }
 
 func (nr *NodeRunner) proposeNewBallot(roundNumber uint64) error {
@@ -415,12 +302,12 @@ func (nr *NodeRunner) proposeNewBallot(roundNumber uint64) error {
 	}
 
 	// collect incoming transactions from `TransactionPool`
-	availableTransactions := nr.consensus.TransactionPool.AvailableTransactions(nr.nodeRunnerStateManager.conf)
+	availableTransactions := nr.consensus.TransactionPool.AvailableTransactions(nr.isaacStateManager.conf)
 	nr.log.Debug("new round proposed", "round", round, "transactions", availableTransactions)
 
 	transactionsChecker := &BallotTransactionChecker{
 		DefaultChecker: sebakcommon.DefaultChecker{handleBallotTransactionCheckerFuncs},
-		NodeRunner:     nr,
+		Consensus:      nr.Consensus(),
 		LocalNode:      nr.localNode,
 		NetworkID:      nr.networkID,
 		Transactions:   availableTransactions,
@@ -455,9 +342,4 @@ func (nr *NodeRunner) proposeNewBallot(roundNumber uint64) error {
 	nr.Log().Debug("ballot broadcasted and voted", "runningRound", runningRound)
 
 	return nil
-}
-
-func (nr *NodeRunner) CloseConsensus(round round.Round) {
-	nr.consensus.SetLatestRound(round)
-	nr.nodeRunnerStateManager.ResetRound()
 }

@@ -5,9 +5,11 @@ import (
 	"sort"
 
 	"boscoin.io/sebak/lib/common"
+	"boscoin.io/sebak/lib/error"
 	"boscoin.io/sebak/lib/network"
 	"boscoin.io/sebak/lib/node"
 	"boscoin.io/sebak/lib/round"
+	"boscoin.io/sebak/lib/storage"
 	logging "github.com/inconshreveable/log15"
 )
 
@@ -23,7 +25,11 @@ type ISAAC struct {
 	LatestRound           round.Round
 	proposerCalculator    ProposerCalculator
 	connectionManager     *sebaknetwork.ConnectionManager
-	log                   logging.Logger
+	storage               *sebakstorage.LevelDBBackend
+
+	BaseBallotCheckerFuncs []sebakcommon.CheckerFunc
+
+	log logging.Logger
 }
 
 func NewISAAC(networkID []byte, node *sebaknode.LocalNode, votingThresholdPolicy sebakcommon.VotingThresholdPolicy) (is *ISAAC, err error) {
@@ -37,6 +43,19 @@ func NewISAAC(networkID []byte, node *sebaknode.LocalNode, votingThresholdPolicy
 	is.log = log.New(logging.Ctx{"isaac": is.Node.Alias()})
 
 	return
+}
+
+var BaseBallotCheckerFuncs = []sebakcommon.CheckerFunc{
+	BallotUnmarshal,
+	BallotNotFromKnownValidators,
+	BallotAlreadyFinished,
+}
+
+var handleBallotTransactionCheckerFuncs = []sebakcommon.CheckerFunc{
+	IsNew,
+	GetMissingTransaction,
+	BallotTransactionsSameSource,
+	BallotTransactionsSourceCheck,
 }
 
 func (is *ISAAC) CloseConsensus(proposer string, round round.Round, vh sebakcommon.VotingHole) (err error) {
@@ -80,12 +99,248 @@ func (is *ISAAC) SetConnectionManager(cm *sebaknetwork.ConnectionManager) {
 	is.connectionManager = cm
 }
 
+func (is *ISAAC) SetStorage(db *sebakstorage.LevelDBBackend) {
+	is.storage = db
+}
+
 func (is *ISAAC) SetLatestConsensusedBlock(block Block) {
 	is.LatestConfirmedBlock = block
 }
 
 func (is *ISAAC) SetLatestRound(round round.Round) {
 	is.LatestRound = round
+}
+
+func (is *ISAAC) handleBallotMessage(message sebaknetwork.Message) (err error) {
+	is.log.Debug("got ballot", "message", message.Head(50))
+
+	baseChecker := &BallotChecker{
+		DefaultChecker: sebakcommon.DefaultChecker{BaseBallotCheckerFuncs},
+		Consensus:      is,
+		LocalNode:      is.Node,
+		NetworkID:      is.NetworkID,
+		Message:        message,
+		Log:            is.log,
+		VotingHole:     sebakcommon.VotingNOTYET,
+	}
+	err = sebakcommon.RunChecker(baseChecker, nil)
+	if err != nil {
+		if _, ok := err.(sebakcommon.CheckerErrorStop); !ok {
+			is.log.Error("failed to handle ballot", "error", err, "state", "base")
+			return
+		}
+	}
+
+	ballot := baseChecker.Ballot
+	err = is.handleBallot(ballot)
+	return
+}
+
+func (is *ISAAC) handleBallot(ballot Ballot) (err error) {
+	{
+		if is.IsVoted(ballot) {
+			err = sebakerror.ErrorBallotAlreadyVoted
+			return
+		}
+
+		var isNew bool
+		if isNew, err = is.Vote(ballot); err != nil {
+			err = errors.New("`RunningRound` not found")
+		}
+
+		var votingResult sebakcommon.VotingHole = sebakcommon.VotingNOTYET
+		if ballot.Proposer() != is.Node.Address() {
+			var proposer string
+			if proposer, err = is.GetVotedProposer(ballot); err == nil {
+				if proposer != ballot.Proposer() {
+					votingResult = sebakcommon.VotingNO
+					is.log.Debug(
+						"ballot has different proposer",
+						"proposer", proposer,
+						"proposed-proposer", ballot.Proposer(),
+					)
+				}
+			}
+		}
+
+		switch ballot.State() {
+		case sebakcommon.BallotStateINIT:
+			{
+				// INITBallotValidateTransactions(checker, args)
+				if !isNew || checker.VotingFinished {
+					break
+				}
+
+				if checker.RoundVote.IsVotedByNode(ballot.State(), is.Node.Address()) {
+					err = sebakerror.ErrorBallotAlreadyVoted
+					break
+				}
+
+				if votingResult != sebakcommon.VotingNOTYET {
+					break
+				}
+
+				if ballot.TransactionsLength() < 1 {
+					votingResult = sebakcommon.VotingYES
+					break
+				}
+
+				transactionsChecker := &BallotTransactionChecker{
+					DefaultChecker: sebakcommon.DefaultChecker{handleBallotTransactionCheckerFuncs},
+					Consensus:      is,
+					LocalNode:      is.Node,
+					NetworkID:      is.NetworkID,
+					Transactions:   ballot.Transactions(),
+					VotingHole:     sebakcommon.VotingNOTYET,
+				}
+
+				err = sebakcommon.RunChecker(transactionsChecker, sebakcommon.DefaultDeferFunc)
+				if err != nil {
+					if _, ok := err.(sebakcommon.CheckerErrorStop); !ok {
+						votingResult = sebakcommon.VotingNO
+						is.log.Debug("failed to handle transactions of ballot", "error", err)
+						err = nil
+						break
+					}
+					err = nil
+				}
+
+				if transactionsChecker.VotingHole == sebakcommon.VotingNO {
+					votingResult = sebakcommon.VotingNO
+				} else {
+					votingResult = sebakcommon.VotingYES
+				}
+			}
+
+			// SIGNBallotBroadcast(checker, args)
+			{
+				if !isNew {
+					return
+				}
+
+				newBallot := ballot
+				newBallot.SetSource(is.Node.Address())
+				newBallot.SetVote(sebakcommon.BallotStateSIGN, votingResult)
+				newBallot.Sign(is.Node.Keypair(), is.NetworkID)
+
+				if found := is.VoteIfRunningRoundExists(newBallot); !found {
+					err = errors.New("`RunningRound` not found")
+				}
+
+				is.connectionManager.Broadcast(newBallot)
+				is.log.Debug("ballot will be broadcasted", "newBallot", newBallot)
+			}
+			// TransitStateToSIGN(checker, args)
+		case sebakcommon.BallotStateSIGN:
+			// BallotCheckResult(checker, args)
+			{
+				if !ballot.State().IsValidForVote() {
+					return
+				}
+
+				result, votingHole, finished := checker.RoundVote.CanGetVotingResult(
+					is.VotingThresholdPolicy,
+					ballot.State(),
+				)
+
+				checker.Result = result
+				checker.VotingFinished = finished
+				checker.FinishedVotingHole = votingHole
+
+				if checker.VotingFinished {
+					is.log.Debug("get result", "finished VotingHole", checker.FinishedVotingHole, "result", checker.Result)
+				}
+
+			}
+			// ACCEPTBallotBroadcast(checker, args)
+			{
+				if !checker.VotingFinished {
+					return
+				}
+
+				newBallot := ballot
+				newBallot.SetSource(is.Node.Address())
+				newBallot.SetVote(sebakcommon.BallotStateACCEPT, checker.FinishedVotingHole)
+				newBallot.Sign(is.Node.Keypair(), checker.NetworkID)
+
+				if found := is.VoteIfRunningRoundExists(newBallot); !found {
+					err = errors.New("RunningRound not found")
+					return
+				}
+
+				is.connectionManager.Broadcast(newBallot)
+				is.log.Debug("ballot will be broadcasted", "newBallot", newBallot)
+			}
+			// TransitStateToACCEPT(checker, args)
+		case sebakcommon.BallotStateACCEPT:
+			{
+				// BallotCheckResult(checker, args)
+				if !ballot.State().IsValidForVote() {
+					return
+				}
+
+				result, votingHole, finished := checker.RoundVote.CanGetVotingResult(
+					is.VotingThresholdPolicy,
+					ballot.State(),
+				)
+
+				checker.Result = result
+				checker.VotingFinished = finished
+				checker.FinishedVotingHole = votingHole
+
+				if checker.VotingFinished {
+					is.log.Debug("get result", "finished VotingHole", checker.FinishedVotingHole, "result", checker.Result)
+				}
+
+			}
+			{
+				// FinishedBallotStore(checker, args)
+				if !checker.VotingFinished {
+					return
+				}
+				if checker.FinishedVotingHole == sebakcommon.VotingYES {
+					var block Block
+					block, err = FinishBallot(
+						is.storage,
+						ballot,
+						is.TransactionPool,
+					)
+					if err != nil {
+						return
+					}
+
+					is.SetLatestConsensusedBlock(block)
+					is.log.Debug("ballot was stored", "block", block)
+
+					err = NewCheckerStopCloseConsensus(checker, "ballot got consensus and will be stored")
+				} else {
+					err = NewCheckerStopCloseConsensus(checker, "ballot got consensus")
+				}
+
+				is.CloseConsensus(
+					ballot.Proposer(),
+					ballot.Round(),
+					checker.FinishedVotingHole,
+				)
+				is.SetLatestRound(ballot.Round())
+				// [TODO]nr.isaacStateManager.ResetRound()
+			}
+		}
+		// err = sebakcommon.RunChecker(checker, nil)
+		// if err != nil {
+		// 	if stopped, ok := err.(sebakcommon.CheckerStop); ok {
+		// 		is.log.Debug(
+		// 			"stopped to handle ballot",
+		// 			"state", baseChecker.Ballot.State(),
+		// 			"reason", stopped.Error(),
+		// 		)
+		// 	} else {
+		// 		is.log.Error("failed to handle ballot", "error", err, "state", baseChecker.Ballot.State())
+		// 		return
+		// 	}
+		// }
+	}
+	return
 }
 
 func (is *ISAAC) IsAvailableRound(round round.Round) bool {
@@ -155,9 +410,6 @@ func (is *ISAAC) VoteIfRunningRoundExists(ballot Ballot) (found bool) {
 }
 
 func (is *ISAAC) Vote(ballot Ballot) (isNew bool, err error) {
-	if !ballot.State().IsValidForVote() {
-		return
-	}
 	roundHash := ballot.Round().Hash()
 	rr := is.runningRounds
 

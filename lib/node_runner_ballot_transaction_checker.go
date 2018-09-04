@@ -9,9 +9,9 @@ import (
 type BallotTransactionChecker struct {
 	sebakcommon.DefaultChecker
 
-	NodeRunner *NodeRunner
-	LocalNode  sebaknode.Node
-	NetworkID  []byte
+	Consensus *ISAAC
+	LocalNode sebaknode.Node
+	NetworkID []byte
 
 	Transactions         []string
 	VotingHole           sebakcommon.VotingHole
@@ -52,7 +52,7 @@ func IsNew(c sebakcommon.Checker, args ...interface{}) (err error) {
 	for _, hash := range checker.Transactions {
 		// check transaction is already stored
 		var found bool
-		if found, err = ExistBlockTransaction(checker.NodeRunner.Storage(), hash); err != nil || found {
+		if found, err = ExistBlockTransaction(checker.Consensus.storage, hash); err != nil || found {
 			if !checker.CheckAll {
 				err = sebakerror.ErrorNewButKnownMessage
 				return
@@ -75,7 +75,7 @@ func GetMissingTransaction(c sebakcommon.Checker, args ...interface{}) (err erro
 
 	var validTransactions []string
 	for _, hash := range checker.ValidTransactions {
-		if !checker.NodeRunner.Consensus().TransactionPool.Has(hash) {
+		if !checker.Consensus.TransactionPool.Has(hash) {
 			// TODO get transaction from proposer and check
 			// `Transaction.IsWellFormed()`
 			continue
@@ -96,7 +96,7 @@ func BallotTransactionsSameSource(c sebakcommon.Checker, args ...interface{}) (e
 	var validTransactions []string
 	sources := map[string]bool{}
 	for _, hash := range checker.ValidTransactions {
-		tx, _ := checker.NodeRunner.Consensus().TransactionPool.Get(hash)
+		tx, _ := checker.Consensus.TransactionPool.Get(hash)
 		if found := sebakcommon.InStringMap(sources, tx.B.Source); found {
 			if !checker.CheckAll {
 				err = sebakerror.ErrorTransactionSameSource
@@ -120,9 +120,9 @@ func BallotTransactionsSourceCheck(c sebakcommon.Checker, args ...interface{}) (
 
 	var validTransactions []string
 	for _, hash := range checker.ValidTransactions {
-		tx, _ := checker.NodeRunner.Consensus().TransactionPool.Get(hash)
+		tx, _ := checker.Consensus.TransactionPool.Get(hash)
 
-		if err = tx.Validate(checker.NodeRunner.Storage()); err != nil {
+		if err = tx.Validate(checker.Consensus.storage); err != nil {
 			if !checker.CheckAll {
 				return
 			}

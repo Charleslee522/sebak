@@ -63,16 +63,19 @@ func (rr *RunningRound) Vote(ballot Ballot, votingThresholdPolicy sebakcommon.Vo
 	} else {
 		rr.Voted[ballot.Proposer()].Vote(ballot)
 	}
-	roundVote := rr.Voted[ballot.Proposer()]
 
-	result, votingHole, finished := roundVote.CanGetVotingResult(
-		votingThresholdPolicy,
-		ballot.State(),
-	)
+	// if !ballot.State().IsValidForVote() {
+	// 	return
+	// }
+	// roundVote := rr.Voted[ballot.Proposer()]
+	// result, votingHole, finished := roundVote.CanGetVotingResult(
+	// 	votingThresholdPolicy,
+	// 	ballot.State(),
+	// )
 
-	if finished {
-		rr.log.Debug("get result", "finished VotingHole", votingHole, "result", result)
-	}
+	// if finished {
+	// 	rr.log.Debug("get result", "finished VotingHole", votingHole, "result", result)
+	// }
 
 	return
 }

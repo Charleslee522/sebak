@@ -68,6 +68,8 @@ func createTestNodeRunner(n int) []*NodeRunner {
 			panic(err)
 		}
 		is.SetConnectionManager(nr.connectionManager)
+		is.SetStorage(nr.Storage())
+
 		nodeRunners = append(nodeRunners, nr)
 	}
 

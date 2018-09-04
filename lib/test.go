@@ -289,7 +289,7 @@ func ReceiveBallot(t *testing.T, nodeRunner *NodeRunner, ballot *Ballot) error {
 	require.Nil(t, err)
 
 	ballotMessage := sebaknetwork.Message{Type: sebaknetwork.BallotMessage, Data: data}
-	err = nodeRunner.handleBallotMessage(ballotMessage)
+	err = nodeRunner.Consensus().handleBallotMessage(ballotMessage)
 	return err
 }
 
