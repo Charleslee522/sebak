@@ -210,7 +210,7 @@ func BallotAlreadyVoted(c sebakcommon.Checker, args ...interface{}) (err error) 
 func BallotVote(c sebakcommon.Checker, args ...interface{}) (err error) {
 	checker := c.(*BallotChecker)
 
-	checker.IsNew, checker.RoundVote, err = checker.NodeRunner.Consensus().Vote(checker.Ballot)
+	checker.IsNew, err = checker.NodeRunner.Consensus().Vote(checker.Ballot)
 
 	return
 }
@@ -220,17 +220,12 @@ func BallotVote(c sebakcommon.Checker, args ...interface{}) (err error) {
 func BallotIsSameProposer(c sebakcommon.Checker, args ...interface{}) (err error) {
 	checker := c.(*BallotChecker)
 
-	if checker.VotingHole != sebakcommon.VotingNOTYET {
+	if checker.Ballot.Proposer() == checker.NodeRunner.Node().Address() {
 		return
 	}
 
-	if checker.Ballot.IsFromProposer() && checker.Ballot.Source() == checker.NodeRunner.Node().Address() {
-		return
-	}
-
-	if proposer, found := checker.NodeRunner.Consensus().GetVotedProposer(checker.Ballot); !found {
-		err = errors.New("`RunningRound` not found")
-	} else {
+	var proposer string
+	if proposer, err = checker.NodeRunner.Consensus().GetVotedProposer(checker.Ballot); err == nil {
 		if proposer != checker.Ballot.Proposer() {
 			checker.VotingHole = sebakcommon.VotingNO
 			checker.Log.Debug(

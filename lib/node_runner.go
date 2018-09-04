@@ -42,25 +42,25 @@ var DefaultHandleINITBallotCheckerFuncs = []sebakcommon.CheckerFunc{
 	BallotVote,
 	BallotIsSameProposer,
 	INITBallotValidateTransactions,
-	SIGNBallotBroadcast,
-	TransitStateToSIGN,
+	// SIGNBallotBroadcast,
+	// TransitStateToSIGN,
 }
 
 var DefaultHandleSIGNBallotCheckerFuncs = []sebakcommon.CheckerFunc{
 	BallotAlreadyVoted,
 	BallotVote,
 	BallotIsSameProposer,
-	BallotCheckResult,
-	ACCEPTBallotBroadcast,
-	TransitStateToACCEPT,
+	// BallotCheckResult,
+	// ACCEPTBallotBroadcast,
+	// TransitStateToACCEPT,
 }
 
 var DefaultHandleACCEPTBallotCheckerFuncs = []sebakcommon.CheckerFunc{
 	BallotAlreadyVoted,
 	BallotVote,
 	BallotIsSameProposer,
-	BallotCheckResult,
-	FinishedBallotStore,
+	// BallotCheckResult,
+	// FinishedBallotStore,
 }
 
 type NodeRunner struct {

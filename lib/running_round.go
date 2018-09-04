@@ -4,6 +4,7 @@ import (
 	"boscoin.io/sebak/lib/common"
 	"boscoin.io/sebak/lib/error"
 	"boscoin.io/sebak/lib/round"
+	logging "github.com/inconshreveable/log15"
 )
 
 type RunningRound struct {
@@ -13,6 +14,7 @@ type RunningRound struct {
 	Proposer     string                              // LocalNode's `Proposer`
 	Transactions map[ /* Proposer */ string][]string /* Transaction.Hash */
 	Voted        map[ /* Proposer */ string]*RoundVote
+	log          logging.Logger
 }
 
 func NewRunningRound(proposer string, ballot Ballot) (*RunningRound, error) {
@@ -24,12 +26,12 @@ func NewRunningRound(proposer string, ballot Ballot) (*RunningRound, error) {
 	voted := map[string]*RoundVote{
 		ballot.Proposer(): roundVote,
 	}
-
 	return &RunningRound{
 		Round:        ballot.Round(),
 		Proposer:     proposer,
 		Transactions: transactions,
 		Voted:        voted,
+		log:          log.New(logging.Ctx{"RunningRound": ballot.Round()}),
 	}, nil
 }
 
@@ -52,7 +54,7 @@ func (rr *RunningRound) IsVoted(ballot Ballot) bool {
 	return roundVote.IsVoted(ballot)
 }
 
-func (rr *RunningRound) Vote(ballot Ballot) {
+func (rr *RunningRound) Vote(ballot Ballot, votingThresholdPolicy sebakcommon.VotingThresholdPolicy) {
 	rr.Lock()
 	defer rr.Unlock()
 
@@ -61,4 +63,16 @@ func (rr *RunningRound) Vote(ballot Ballot) {
 	} else {
 		rr.Voted[ballot.Proposer()].Vote(ballot)
 	}
+	roundVote := rr.Voted[ballot.Proposer()]
+
+	result, votingHole, finished := roundVote.CanGetVotingResult(
+		votingThresholdPolicy,
+		ballot.State(),
+	)
+
+	if finished {
+		rr.log.Debug("get result", "finished VotingHole", votingHole, "result", result)
+	}
+
+	return
 }

@@ -8,6 +8,7 @@ import (
 	"boscoin.io/sebak/lib/network"
 	"boscoin.io/sebak/lib/node"
 	"boscoin.io/sebak/lib/round"
+	logging "github.com/inconshreveable/log15"
 )
 
 type ISAAC struct {
@@ -22,6 +23,7 @@ type ISAAC struct {
 	LatestRound           round.Round
 	proposerCalculator    ProposerCalculator
 	connectionManager     *sebaknetwork.ConnectionManager
+	log                   logging.Logger
 }
 
 func NewISAAC(networkID []byte, node *sebaknode.LocalNode, votingThresholdPolicy sebakcommon.VotingThresholdPolicy) (is *ISAAC, err error) {
@@ -32,6 +34,7 @@ func NewISAAC(networkID []byte, node *sebaknode.LocalNode, votingThresholdPolicy
 		TransactionPool:       NewTransactionPool(),
 		runningRounds:         map[string]*RunningRound{},
 	}
+	is.log = log.New(logging.Ctx{"isaac": is.Node.Alias()})
 
 	return
 }
@@ -124,16 +127,21 @@ func (is *ISAAC) IsVoted(ballot Ballot) bool {
 	return runningRound.IsVoted(ballot)
 }
 
-func (is *ISAAC) GetVotedProposer(ballot Ballot) (proposer string, found bool) {
+func (is *ISAAC) GetVotedProposer(ballot Ballot) (string, error) {
 	rr := is.runningRounds
 	var runningRound *RunningRound
+	var found bool
 	if runningRound, found = rr[ballot.Round().Hash()]; !found {
-		return
+		err := errors.New("`RunningRound` not found")
+		return "", err
 	}
-	return runningRound.Proposer, found
+	return runningRound.Proposer, nil
 }
 
 func (is *ISAAC) VoteIfRunningRoundExists(ballot Ballot) (found bool) {
+	if !ballot.State().IsValidForVote() {
+		return
+	}
 	rr := is.runningRounds
 
 	var runningRound *RunningRound
@@ -141,12 +149,15 @@ func (is *ISAAC) VoteIfRunningRoundExists(ballot Ballot) (found bool) {
 		return
 	}
 
-	runningRound.Vote(ballot)
+	runningRound.Vote(ballot, is.VotingThresholdPolicy)
 
 	return
 }
 
-func (is *ISAAC) Vote(ballot Ballot) (isNew bool, roundVote *RoundVote, err error) {
+func (is *ISAAC) Vote(ballot Ballot) (isNew bool, err error) {
+	if !ballot.State().IsValidForVote() {
+		return
+	}
 	roundHash := ballot.Round().Hash()
 	rr := is.runningRounds
 
@@ -170,10 +181,8 @@ func (is *ISAAC) Vote(ballot Ballot) (isNew bool, roundVote *RoundVote, err erro
 			isNew = true
 		}
 
-		runningRound.Vote(ballot)
+		runningRound.Vote(ballot, is.VotingThresholdPolicy)
 	}
-
-	roundVote, err = runningRound.RoundVote(ballot.Proposer())
 
 	return
 }
