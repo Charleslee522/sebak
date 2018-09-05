@@ -1,3 +1,5 @@
+// IsaacStateManager manages the IsaacState.
+// The most important function `Start()` is called in StartStateManager() function in node_runner.go by goroutine.
 package sebak
 
 import (
