@@ -9,7 +9,7 @@ import (
 
 	"boscoin.io/sebak/lib/block"
 	"boscoin.io/sebak/lib/common"
-	"boscoin.io/sebak/lib/network"
+	network "boscoin.io/sebak/lib/network"
 	"boscoin.io/sebak/lib/node"
 	"boscoin.io/sebak/lib/round"
 	"boscoin.io/sebak/lib/storage"
@@ -217,6 +217,18 @@ func GetTransaction(t *testing.T) (tx Transaction, txByte []byte) {
 
 	txByte, err = tx.Serialize()
 	require.Nil(t, err)
+
+	return
+}
+
+func GetNMessages(t *testing.T, n int) (messages []network.Message, txs []Transaction) {
+	// messages := make([]network.messages)
+	for i := 0; i < n; i++ {
+		tx, txByte := GetTransaction(t)
+		message := network.Message{Type: network.TransactionMessage, Data: txByte}
+		messages = append(messages, message)
+		txs = append(txs, tx)
+	}
 
 	return
 }
