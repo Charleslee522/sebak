@@ -29,7 +29,6 @@ func TestStateINITProposer(t *testing.T) {
 	conf.TimeoutINIT = time.Hour
 	conf.TimeoutSIGN = time.Hour
 	conf.TimeoutACCEPT = time.Hour
-	conf.TimeoutALLCONFIRM = time.Hour
 
 	nr.SetConf(conf)
 
@@ -64,7 +63,7 @@ func TestStateINITNotProposer(t *testing.T) {
 	conf.TimeoutINIT = time.Hour
 	conf.TimeoutSIGN = time.Hour
 	conf.TimeoutACCEPT = time.Hour
-	conf.TimeoutALLCONFIRM = time.Hour
+	conf.BlockTime = time.Hour
 
 	nr.SetConf(conf)
 
@@ -98,7 +97,6 @@ func TestStateINITTimeoutNotProposer(t *testing.T) {
 	conf.TimeoutINIT = 1 * time.Millisecond
 	conf.TimeoutSIGN = time.Hour
 	conf.TimeoutACCEPT = time.Hour
-	conf.TimeoutALLCONFIRM = time.Hour
 
 	nr.SetConf(conf)
 
@@ -153,7 +151,7 @@ func TestStateSIGNTimeoutProposer(t *testing.T) {
 	conf.TimeoutINIT = time.Hour
 	conf.TimeoutSIGN = time.Millisecond
 	conf.TimeoutACCEPT = time.Hour
-	conf.TimeoutALLCONFIRM = time.Hour
+	conf.BlockTime = time.Hour
 
 	nr.SetConf(conf)
 
@@ -218,7 +216,6 @@ func TestStateSIGNTimeoutNotProposer(t *testing.T) {
 	conf.TimeoutINIT = time.Millisecond
 	conf.TimeoutSIGN = time.Millisecond
 	conf.TimeoutACCEPT = time.Hour
-	conf.TimeoutALLCONFIRM = time.Hour
 
 	nr.SetConf(conf)
 
@@ -280,7 +277,6 @@ func TestStateACCEPTTimeoutProposerThenNotProposer(t *testing.T) {
 	conf.TimeoutINIT = time.Hour
 	conf.TimeoutSIGN = time.Millisecond
 	conf.TimeoutACCEPT = time.Millisecond
-	conf.TimeoutALLCONFIRM = time.Hour
 
 	nr.SetConf(conf)
 
@@ -340,7 +336,6 @@ func TestStateTransitFromTimeoutInitToAccept(t *testing.T) {
 	conf.TimeoutINIT = time.Hour
 	conf.TimeoutSIGN = time.Millisecond
 	conf.TimeoutACCEPT = time.Millisecond
-	conf.TimeoutALLCONFIRM = time.Millisecond
 
 	nr.SetConf(conf)
 
@@ -387,7 +382,6 @@ func TestStateTransitFromTimeoutSignToAccept(t *testing.T) {
 	conf.TimeoutINIT = time.Hour
 	conf.TimeoutSIGN = time.Hour
 	conf.TimeoutACCEPT = time.Millisecond
-	conf.TimeoutALLCONFIRM = time.Millisecond
 
 	nr.SetConf(conf)
 
