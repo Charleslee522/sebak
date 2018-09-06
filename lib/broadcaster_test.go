@@ -2,7 +2,6 @@ package sebak
 
 import (
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/require"
 )
@@ -21,7 +20,6 @@ func TestConnectionManagerBroadcaster(t *testing.T) {
 	nr.Consensus().SetLatestConsensusedBlock(genesisBlock)
 
 	conf := NewISAACConfiguration()
-	conf.TimeoutALLCONFIRM = 1 * time.Millisecond
 
 	nr.SetConf(conf)
 

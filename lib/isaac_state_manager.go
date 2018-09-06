@@ -16,7 +16,6 @@ type ISAACStateManager struct {
 	state         ISAACState
 	conf          *ISAACConfiguration
 	stateTransit  chan ISAACState
-	nextHeight    chan struct{}
 	stop          chan struct{}
 	transitSignal func() // `transitSignal` is function which is called when the ISAACState is changed.
 }
@@ -27,7 +26,6 @@ func NewISAACStateManager(nr *NodeRunner) *ISAACStateManager {
 		nr:   nr,
 	}
 	p.stateTransit = make(chan ISAACState)
-	p.nextHeight = make(chan struct{})
 	p.stop = make(chan struct{})
 
 	p.state = NewISAACState(
@@ -62,18 +60,18 @@ func (sm *ISAACStateManager) TransitISAACState(round round.Round, ballotState co
 	}
 }
 
-func isTargetLater(current ISAACState, target ISAACState) (result bool) {
-	if current.round.BlockHeight > target.round.BlockHeight {
+func isTargetLater(state ISAACState, target ISAACState) (result bool) {
+	if state.round.BlockHeight > target.round.BlockHeight {
 		result = false
-	} else if current.round.BlockHeight < target.round.BlockHeight {
+	} else if state.round.BlockHeight < target.round.BlockHeight {
 		result = true
-	} else { // current.round.BlockHeight == target.round.BlockHeight
-		if current.round.Number > target.round.Number {
+	} else { // state.round.BlockHeight == target.round.BlockHeight
+		if state.round.Number > target.round.Number {
 			result = false
-		} else if current.round.Number < target.round.Number {
+		} else if state.round.Number < target.round.Number {
 			result = true
-		} else { // current.round.Number == target.round.Number
-			if current.ballotState >= target.ballotState {
+		} else { // state.round.Number == target.round.Number
+			if state.ballotState >= target.ballotState {
 				result = false
 			} else {
 				result = true
@@ -84,19 +82,16 @@ func isTargetLater(current ISAACState, target ISAACState) (result bool) {
 }
 
 func (sm *ISAACStateManager) IncreaseRound() {
-	sm.increaseRound()
-}
-
-func (sm *ISAACStateManager) increaseRound() {
 	round := sm.state.round
 	round.Number++
 	sm.TransitISAACState(round, common.BallotStateINIT)
 }
 
 func (sm *ISAACStateManager) NextHeight() {
-	go func() {
-		sm.nextHeight <- struct{}{}
-	}()
+	round := sm.state.round
+	round.BlockHeight++
+	round.Number = 0
+	sm.TransitISAACState(round, common.BallotStateINIT)
 }
 
 // In `Start()` method a node proposes ballot.
@@ -109,7 +104,7 @@ func (sm *ISAACStateManager) Start() {
 			select {
 			case <-timer.C:
 				if sm.state.ballotState == common.BallotStateACCEPT {
-					sm.increaseRound()
+					sm.IncreaseRound()
 					break
 				}
 				go sm.broadcastExpiredBallot(sm.state)
@@ -135,12 +130,6 @@ func (sm *ISAACStateManager) Start() {
 					timer.Reset(sm.conf.TimeoutINIT)
 					log.Error("Wrong ISAACState", "ISAACState", state)
 				}
-
-			case <-sm.nextHeight:
-				round := sm.state.round
-				round.BlockHeight++
-				round.Number = 0
-				sm.TransitISAACState(round, common.BallotStateINIT)
 
 			case <-sm.stop:
 				return
