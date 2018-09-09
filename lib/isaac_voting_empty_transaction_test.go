@@ -9,7 +9,7 @@ import (
 	"boscoin.io/sebak/lib/round"
 )
 
-func TestIsaacNewBallotWithEmptyTransaction(t *testing.T) {
+func TestISAACNewBallotWithEmptyTransaction(t *testing.T) {
 	nodeRunners := createTestNodeRunner(1)
 
 	nodeRunner := nodeRunners[0]
@@ -31,7 +31,7 @@ func TestIsaacNewBallotWithEmptyTransaction(t *testing.T) {
 
 }
 
-func TestIsaacBallotWithEmptyTransactionVoting(t *testing.T) {
+func TestISAACBallotWithEmptyTransactionVoting(t *testing.T) {
 	nodeRunners := createTestNodeRunner(5)
 
 	nodeRunner := nodeRunners[0]

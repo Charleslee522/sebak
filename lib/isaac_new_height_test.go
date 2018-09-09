@@ -11,14 +11,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-//	TestIsaacNewHeight indicates the following:
+//	TestISAACStateNewHeight indicates the following:
 //		1. The node is the proposer in every round.
 //		2. There are 5 nodes and threshold is 4.
 //		3. The node receives the SIGN, ACCEPT messages in order from the other four validator nodes.
 //		4. The node receives a ballot that exceeds the threshold, and the block is confirmed.
 //		5. Proceed '1.' ~ '4.' for 5 heights.
 
-func TestIsaacStateNewHeight(t *testing.T) {
+func TestISAACStateNewHeight(t *testing.T) {
 	nodeRunners := createTestNodeRunner(5)
 
 	messages, txs := GetNMessages(t, 5)
