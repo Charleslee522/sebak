@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	common "boscoin.io/sebak/lib/common"
-	"boscoin.io/sebak/lib/network"
 	"boscoin.io/sebak/lib/round"
 	"github.com/stretchr/testify/require"
 )
@@ -38,7 +37,7 @@ func TestISAACStateNewHeight(t *testing.T) {
 	runHeight(t, nodeRunners, messages[4], txs[4], 6, 5)
 }
 
-func runHeight(t *testing.T, nodeRunners []*NodeRunner, message network.Message, tx Transaction, height uint64, totalTxs uint64) {
+func runHeight(t *testing.T, nodeRunners []*NodeRunner, message common.NetworkMessage, tx Transaction, height uint64, totalTxs uint64) {
 	var err error
 	nodeRunner := nodeRunners[0]
 	err = nodeRunner.handleTransaction(message)

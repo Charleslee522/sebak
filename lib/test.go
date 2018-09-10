@@ -221,11 +221,11 @@ func GetTransaction(t *testing.T) (tx Transaction, txByte []byte) {
 	return
 }
 
-func GetNMessages(t *testing.T, n int) (messages []network.Message, txs []Transaction) {
+func GetNMessages(t *testing.T, n int) (messages []common.NetworkMessage, txs []Transaction) {
 	// messages := make([]network.messages)
 	for i := 0; i < n; i++ {
 		tx, txByte := GetTransaction(t)
-		message := network.Message{Type: network.TransactionMessage, Data: txByte}
+		message := common.NetworkMessage{Type: common.TransactionMessage, Data: txByte}
 		messages = append(messages, message)
 		txs = append(txs, tx)
 	}
