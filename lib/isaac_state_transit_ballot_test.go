@@ -10,7 +10,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"boscoin.io/sebak/lib/common"
-	"boscoin.io/sebak/lib/network"
 	"boscoin.io/sebak/lib/node"
 	"boscoin.io/sebak/lib/round"
 )
@@ -27,7 +26,7 @@ func TestStateTransitFromBallot(t *testing.T) {
 
 	tx, txByte := GetTransaction(t)
 
-	message := network.Message{Type: network.TransactionMessage, Data: txByte}
+	message := common.NetworkMessage{Type: common.TransactionMessage, Data: txByte}
 
 	nodeRunner := nodeRunners[0]
 
@@ -122,7 +121,7 @@ func TestStateTransitCauseNoBallot(t *testing.T) {
 
 	tx, txByte := GetTransaction(t)
 
-	message := network.Message{Type: network.TransactionMessage, Data: txByte}
+	message := common.NetworkMessage{Type: common.TransactionMessage, Data: txByte}
 
 	nodeRunner := nodeRunners[0]
 
@@ -227,7 +226,7 @@ func TestStateTransitCauseEXPBallot(t *testing.T) {
 
 	tx, txByte := GetTransaction(t)
 
-	message := network.Message{Type: network.TransactionMessage, Data: txByte}
+	message := common.NetworkMessage{Type: common.TransactionMessage, Data: txByte}
 
 	nodeRunner := nodeRunners[0]
 
@@ -320,7 +319,7 @@ func TestStateTransitSIGNTimeoutACCEPTBallotProposer(t *testing.T) {
 
 	tx, txByte := GetTransaction(t)
 
-	message := network.Message{Type: network.TransactionMessage, Data: txByte}
+	message := common.NetworkMessage{Type: common.TransactionMessage, Data: txByte}
 
 	nodeRunner := nodeRunners[0]
 
@@ -417,7 +416,7 @@ func TestStateTransitSIGNBallotACCEPTTimeoutProposer(t *testing.T) {
 
 	tx, txByte := GetTransaction(t)
 
-	message := network.Message{Type: network.TransactionMessage, Data: txByte}
+	message := common.NetworkMessage{Type: common.TransactionMessage, Data: txByte}
 
 	nodeRunner := nodeRunners[0]
 
@@ -537,7 +536,7 @@ func TestStateTransitTwoBlocks(t *testing.T) {
 
 	tx, txByte := GetTransaction(t)
 
-	message := network.Message{Type: network.TransactionMessage, Data: txByte}
+	message := common.NetworkMessage{Type: common.TransactionMessage, Data: txByte}
 
 	nodeRunner := nodeRunners[0]
 
