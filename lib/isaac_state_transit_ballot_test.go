@@ -1,4 +1,6 @@
-// We can test that a node broadcast propose ballot or B(`EXP`) in ISAACStateManager.
+//	In this file, there are unittests assume that one node receive a message from validators,
+//	and how the state of the node changes.
+
 package sebak
 
 import (
@@ -128,6 +130,7 @@ func TestStateTransitCauseNoBallot(t *testing.T) {
 	conf.TimeoutINIT = time.Hour
 	conf.TimeoutSIGN = time.Hour
 	conf.TimeoutACCEPT = time.Hour
+	conf.BlockTime = time.Hour
 
 	nodeRunner.SetConf(conf)
 	nodeRunner.SetProposerCalculator(SelfProposerCalculator{})
@@ -232,6 +235,7 @@ func TestStateTransitCauseEXPBallot(t *testing.T) {
 	conf.TimeoutINIT = time.Hour
 	conf.TimeoutSIGN = time.Hour
 	conf.TimeoutACCEPT = time.Hour
+	conf.BlockTime = time.Hour
 
 	nodeRunner.SetConf(conf)
 	nodeRunner.SetProposerCalculator(SelfProposerCalculator{})
@@ -327,6 +331,7 @@ func TestStateTransitSIGNTimeoutACCEPTBallotProposer(t *testing.T) {
 	conf.TimeoutINIT = time.Hour
 	conf.TimeoutSIGN = time.Millisecond
 	conf.TimeoutACCEPT = time.Hour
+	conf.BlockTime = 200 * time.Millisecond
 
 	nodeRunner.SetConf(conf)
 
@@ -423,6 +428,7 @@ func TestStateTransitSIGNBallotACCEPTTimeoutProposer(t *testing.T) {
 	conf.TimeoutINIT = time.Hour
 	conf.TimeoutSIGN = time.Hour
 	conf.TimeoutACCEPT = time.Millisecond
+	conf.BlockTime = 200 * time.Millisecond
 
 	nodeRunner.SetConf(conf)
 
@@ -542,6 +548,7 @@ func TestStateTransitTwoBlocks(t *testing.T) {
 	conf.TimeoutINIT = time.Hour
 	conf.TimeoutSIGN = time.Hour
 	conf.TimeoutACCEPT = time.Hour
+	conf.BlockTime = 1 * time.Millisecond
 
 	nodeRunner.SetConf(conf)
 
