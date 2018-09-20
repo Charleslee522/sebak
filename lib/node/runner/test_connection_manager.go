@@ -38,7 +38,9 @@ func (c *TestConnectionManager) Broadcast(message common.Message) {
 	defer c.Unlock()
 	c.messages = append(c.messages, message)
 	if c.recv != nil {
-		c.recv <- struct{}{}
+		go func() {
+			c.recv <- struct{}{}
+		}()
 	}
 	return
 }
