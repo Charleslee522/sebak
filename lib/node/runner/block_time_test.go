@@ -17,7 +17,7 @@ func TestBlockTime(t *testing.T) {
 
 	time.Sleep(sec)
 
-	latestBlock := nr.Consensus().LatestConfirmedBlock()
+	latestBlock := nr.Consensus().LatestBlock()
 	latestHeight := latestBlock.Height
 	expectedHeight := sec / nr.isaacStateManager.Conf.BlockTime
 

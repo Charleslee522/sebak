@@ -409,7 +409,7 @@ func (nr *NodeRunner) InitRound() {
 		panic(err)
 	}
 
-	nr.consensus.SetLatestConsensusedBlock(latestBlock)
+	nr.consensus.SetLatestBlock(latestBlock)
 	nr.consensus.SetLatestRound(round.Round{})
 
 	ticker := time.NewTicker(time.Millisecond * 5)
@@ -463,7 +463,7 @@ func (nr *NodeRunner) TransitISAACState(round round.Round, ballotState ballot.St
 }
 
 func (nr *NodeRunner) proposeNewBallot(roundNumber uint64) error {
-	b := nr.consensus.LatestConfirmedBlock()
+	b := nr.consensus.LatestBlock()
 	round := round.Round{
 		Number:      roundNumber,
 		BlockHeight: b.Height,
