@@ -144,9 +144,9 @@ func (sm *ISAACStateManager) IncreaseRound() {
 }
 
 func (sm *ISAACStateManager) NextHeight() {
-	state := sm.State()
-	sm.nr.Log().Debug("begin ISAACStateManager.NextHeight()", "height", state.Height, "round", state.Round)
-	sm.TransitISAACState(state.Height+1, 0, ballot.StateINIT)
+	b := sm.nr.Consensus().LatestBlock()
+	sm.nr.Log().Debug("begin ISAACStateManager.NextHeight()", "height", b.Height, "round", 0)
+	sm.TransitISAACState(b.Height, 0, ballot.StateINIT)
 }
 
 // In `Start()` method a node proposes ballot.
