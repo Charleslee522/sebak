@@ -359,9 +359,11 @@ func (nr *NodeRunner) handleBallotMessage(message common.NetworkMessage) (err er
 	if err != nil {
 		if _, ok := err.(common.CheckerErrorStop); !ok {
 			nr.log.Debug("failed to handle ballot", "error", err, "state", "")
+			nr.log.Info("failed to handle ballot", "error", err, "state", "")
 			return
 		}
 	}
+	nr.log.Info("passed to handle ballot")
 
 	var checkerFuncs []common.CheckerFunc
 	switch baseChecker.Ballot.State() {

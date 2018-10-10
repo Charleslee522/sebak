@@ -116,6 +116,9 @@ func (is *ISAAC) IsAvailableRound(round round.Round) bool {
 		return true
 	}
 
+	// return false
+
+	is.log.Info("comparing height in IsAvailableRound()", "latestHeight", is.latestConfirmedBlock.Height, "ballotHeight", round.BlockHeight)
 	if round.BlockHeight < is.latestConfirmedBlock.Height {
 		return false
 	} else if round.BlockHeight == is.latestConfirmedBlock.Height {
@@ -126,10 +129,13 @@ func (is *ISAAC) IsAvailableRound(round round.Round) bool {
 		// TODO if incoming round.BlockHeight is bigger than
 		// latestConfirmedBlock.Height and this round confirmed successfully,
 		// this node will get into sync state
+		is.log.Info("return false because current is lower than latest in IsAvailableRound()")
+		return false
 	}
 
 	if round.BlockHeight == is.LatestRound.BlockHeight {
 		if round.Number <= is.LatestRound.Number {
+			is.log.Info("return false in IsAvailableRound()")
 			return false
 		}
 	}

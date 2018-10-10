@@ -101,7 +101,7 @@ func BallotAlreadyFinished(c common.Checker, args ...interface{}) (err error) {
 	round := checker.Ballot.Round()
 	if !checker.NodeRunner.Consensus().IsAvailableRound(round) {
 		err = errors.ErrorBallotAlreadyFinished
-		checker.Log.Debug("ballot already finished")
+		checker.Log.Info("ballot already finished", "ballot", checker.Ballot)
 		return
 	}
 
