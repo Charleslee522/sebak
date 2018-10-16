@@ -12,24 +12,22 @@ type RunningRound struct {
 	sync.RWMutex
 
 	Round        round.Round
-	Proposer     string                              // LocalNode's `Proposer`
 	Transactions map[ /* Proposer */ string][]string /* Transaction.Hash */
 	Voted        map[ /* Proposer */ string]*RoundVote
 }
 
-func NewRunningRound(proposer string, ballot ballot.Ballot) (*RunningRound, error) {
+func NewRunningRound(b ballot.Ballot) (*RunningRound, error) {
 	transactions := map[string][]string{
-		ballot.Proposer(): ballot.Transactions(),
+		b.Proposer(): b.Transactions(),
 	}
 
-	roundVote := NewRoundVote(ballot)
+	roundVote := NewRoundVote(b)
 	voted := map[string]*RoundVote{
-		ballot.Proposer(): roundVote,
+		b.Proposer(): roundVote,
 	}
 
 	return &RunningRound{
-		Round:        ballot.Round(),
-		Proposer:     proposer,
+		Round:        b.Round(),
 		Transactions: transactions,
 		Voted:        voted,
 	}, nil

@@ -237,16 +237,7 @@ func BallotVote(c common.Checker, args ...interface{}) (err error) {
 func BallotIsSameProposer(c common.Checker, args ...interface{}) (err error) {
 	checker := c.(*BallotChecker)
 
-	if checker.VotingHole != ballot.VotingNOTYET {
-		return
-	}
-
 	if checker.Ballot.IsFromProposer() && checker.Ballot.Source() == checker.NodeRunner.Node().Address() {
-		return
-	}
-
-	if !checker.NodeRunner.Consensus().HasRunningRound(checker.Ballot.Round().Index()) {
-		err = errors.New("`RunningRound` not found")
 		return
 	}
 

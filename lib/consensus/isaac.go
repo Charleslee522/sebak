@@ -231,12 +231,7 @@ func (is *ISAAC) Vote(b ballot.Ballot) (isNew bool, err error) {
 	var found bool
 	var runningRound *RunningRound
 	if runningRound, found = is.RunningRounds[roundHash]; !found {
-		proposer := is.SelectProposer(
-			b.Round().BlockHeight,
-			b.Round().Number,
-		)
-
-		if runningRound, err = NewRunningRound(proposer, b); err != nil {
+		if runningRound, err = NewRunningRound(b); err != nil {
 			return true, err
 		}
 
@@ -285,11 +280,7 @@ func (is *ISAAC) HasRunningRound(roundHash string) bool {
 func (is *ISAAC) HasSameProposer(b ballot.Ballot) bool {
 	is.RLock()
 	defer is.RUnlock()
-	if runningRound, found := is.RunningRounds[b.Round().Index()]; found {
-		return runningRound.Proposer == b.Proposer()
-	}
-
-	return false
+	return b.Proposer() == is.SelectProposer(b.Round().BlockHeight, b.Round().Number)
 }
 
 func (is *ISAAC) LatestConfirmedBlock() block.Block {
