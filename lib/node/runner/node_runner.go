@@ -38,32 +38,32 @@ var DefaultHandleTransactionCheckerFuncs = []common.CheckerFunc{
 var DefaultHandleBaseBallotCheckerFuncs = []common.CheckerFunc{
 	BallotUnmarshal,
 	BallotNotFromKnownValidators,
-	BallotCheckSYNC,
 	BallotAlreadyFinished,
 }
 
 var DefaultHandleINITBallotCheckerFuncs = []common.CheckerFunc{
+	BallotIsSameProposer,
 	BallotAlreadyVoted,
 	BallotVote,
-	BallotIsSameProposer,
 	INITBallotValidateTransactions,
 	SIGNBallotBroadcast,
 	TransitStateToSIGN,
 }
 
 var DefaultHandleSIGNBallotCheckerFuncs = []common.CheckerFunc{
+	BallotIsSameProposer,
 	BallotAlreadyVoted,
 	BallotVote,
-	BallotIsSameProposer,
 	BallotCheckResult,
 	ACCEPTBallotBroadcast,
 	TransitStateToACCEPT,
 }
 
 var DefaultHandleACCEPTBallotCheckerFuncs = []common.CheckerFunc{
+	BallotIsSameProposer,
+	BallotCheckSYNC,
 	BallotAlreadyVoted,
 	BallotVote,
-	BallotIsSameProposer,
 	BallotCheckResult,
 	FinishedBallotStore,
 }

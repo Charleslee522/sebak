@@ -109,7 +109,7 @@ func BallotCheckSYNC(c common.Checker, args ...interface{}) (err error) {
 		return
 	}
 
-	if !isBallotAcceptYes(b) {
+	if !isBallotYes(b, checker.VotingHole) {
 		return
 	}
 
@@ -179,8 +179,8 @@ func BallotCheckSYNC(c common.Checker, args ...interface{}) (err error) {
 	return
 }
 
-func isBallotAcceptYes(b ballot.Ballot) bool {
-	return b.State() == ballot.StateACCEPT && b.Vote() == ballot.VotingYES
+func isBallotYes(b ballot.Ballot, vote ballot.VotingHole) bool {
+	return b.Vote() == ballot.VotingYES && vote == ballot.VotingYES
 }
 
 func updateLatestBlockFromDatabase(is *consensus.ISAAC, st *storage.LevelDBBackend, log logging.Logger) error {
