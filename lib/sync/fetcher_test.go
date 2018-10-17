@@ -12,7 +12,7 @@ import (
 	"boscoin.io/sebak/lib/network"
 	"boscoin.io/sebak/lib/node"
 	"boscoin.io/sebak/lib/node/runner"
-	"boscoin.io/sebak/lib/storage"
+
 	"github.com/stellar/go/keypair"
 	"github.com/stretchr/testify/require"
 )
@@ -32,7 +32,7 @@ func writeNodeItem(w http.ResponseWriter, itemType runner.NodeItemDataType, s []
 }
 
 func TestBlockFetcher(t *testing.T) {
-	st := storage.NewTestStorage()
+	st := block.InitTestBlockchain()
 	defer st.Close()
 
 	kp, _ := keypair.Random()

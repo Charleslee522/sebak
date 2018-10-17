@@ -7,12 +7,11 @@ import (
 	"boscoin.io/sebak/lib/block"
 	"boscoin.io/sebak/lib/common"
 	"boscoin.io/sebak/lib/network"
-	"boscoin.io/sebak/lib/storage"
 	"github.com/stretchr/testify/require"
 )
 
 func TestValidator(t *testing.T) {
-	st := storage.NewTestStorage()
+	st := block.InitTestBlockchain()
 	defer st.Close()
 
 	networkID := []byte("test-network")
@@ -22,10 +21,7 @@ func TestValidator(t *testing.T) {
 
 	ctx := context.Background()
 
-	bk := block.TestMakeNewBlock(nil)
-	err := bk.Save(st)
-	require.Nil(t, err)
-
+	bk := block.GetLatestBlock(st)
 	bk2 := block.TestMakeNewBlockWithPrevBlock(bk, nil)
 
 	si := &SyncInfo{

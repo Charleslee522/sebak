@@ -9,7 +9,7 @@ import (
 func TestPool(t *testing.T) {
 	size := 2
 	ctx := context.Background()
-	pool := NewPool(size)
+	pool := NewPool(uint64(size))
 	var wg sync.WaitGroup
 
 	wg.Add(size)
