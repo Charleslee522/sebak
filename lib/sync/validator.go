@@ -3,6 +3,7 @@ package sync
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	"boscoin.io/sebak/lib/block"
@@ -138,7 +139,8 @@ func (v *BlockValidator) finishBlock(ctx context.Context, syncInfo *SyncInfo) er
 	case <-ctx.Done():
 		return nil
 	default:
-		observer.SyncBlockWaitObserver.Trigger(string(syncInfo.BlockHeight))
+		event := strconv.FormatUint(syncInfo.BlockHeight, 10)
+		observer.SyncBlockWaitObserver.Trigger(event)
 	}
 
 	return nil
@@ -204,33 +206,56 @@ func (v *BlockValidator) existsBlock(ctx context.Context, st *storage.LevelDBBac
 }
 
 func (v *BlockValidator) getPrevBlock(pctx context.Context, height uint64) (*block.Block, error) {
-	ctx, cancelFunc := context.WithTimeout(pctx, v.prevBlockWaitTimeout)
-	defer cancelFunc()
+	ctx, cancelFunc := context.WithCancel(pctx)
 
 	prevHeight := height - 1
+	waitC := make(chan struct{})
 
-	exists, err := block.ExistsBlockByHeight(v.storage, prevHeight)
-	if err != nil {
-		return nil, err
-	}
-
-	if exists == false {
-		waitC := make(chan struct{})
-		observer.SyncBlockWaitObserver.On(string(prevHeight), func(args ...interface{}) {
-			select {
-			case waitC <- struct{}{}:
-			case <-ctx.Done():
+	go func() {
+	L:
+		for {
+			exists, err := block.ExistsBlockByHeight(v.storage, prevHeight)
+			if err != nil {
+				v.logger.Error("getPrevBlock: block.ExistsBlockByHeight", "err", err)
 			}
-		})
+			if exists == true {
+				select {
+				case waitC <- struct{}{}:
+				case <-ctx.Done():
+				}
+				break L
+			}
 
+			sleep := time.After(v.prevBlockWaitTimeout)
+
+			select {
+			case <-ctx.Done():
+			case <-sleep:
+			}
+		}
+		v.logger.Debug("done: prev height db watcher", "height", height)
+	}()
+
+	event := strconv.FormatUint(prevHeight, 10)
+	observer.SyncBlockWaitObserver.One(event, func(args ...interface{}) {
 		select {
-		case <-waitC:
+		case waitC <- struct{}{}:
+			v.logger.Debug("SyncBlockWaitObserver", "prevHeight", prevHeight)
 		case <-ctx.Done():
 		}
+		v.logger.Debug("done: SyncBlockWaitObserver", "height", height)
+	})
+
+	select {
+	case <-waitC:
+	case <-ctx.Done():
 	}
+
+	cancelFunc() // done observer and db watcher
 
 	prevBlock, err := block.GetBlockByHeight(v.storage, prevHeight)
 	if err != nil {
+		v.logger.Error("prevBlock: GetBlockByHeight", "prevHeight", prevHeight, "err", err)
 		return nil, err
 	}
 
