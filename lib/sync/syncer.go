@@ -2,7 +2,6 @@ package sync
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"boscoin.io/sebak/lib/block"
@@ -128,6 +127,7 @@ func (s *Syncer) SetSyncTargetBlock(ctx context.Context, height uint64, nodeAddr
 	}
 	select {
 	case s.requestHighestBlock <- req:
+		s.logger.Debug("SetSyncTargetBlock", "req", req)
 	case <-ctx.Done():
 		return ctx.Err()
 	}
@@ -173,7 +173,7 @@ func (s *Syncer) loop() {
 		case req := <-s.requestHighestBlock:
 			height := req.height
 			nodeAddrs = req.nodeAddrs
-			s.logger.Debug("update highest Height", "height", height, "nodes", len(nodeAddrs))
+			s.logger.Info("updated highest Height", "height", height, "nodes", len(nodeAddrs))
 			if height > syncProgress.CurrentBlock {
 				syncProgress.HighestBlock = height
 				s.sync(syncProgress, nodeAddrs)
@@ -193,13 +193,6 @@ func (s *Syncer) sync(p *SyncProgress, nodeAddrs []string) {
 		currentHeight     = p.CurrentBlock
 		highestHeight     = p.HighestBlock
 		latestBlockHeight = s.latestBlockHeight()
-		log               = func(msg string) {
-			if msg == "" {
-				msg = fmt.Sprintf("sync progress")
-			}
-			s.logger.Info(msg,
-				"p.StartingBlock", p.StartingBlock, "cur", p.CurrentBlock, "high", p.HighestBlock)
-		}
 	)
 
 	if latestBlockHeight > currentHeight {
@@ -208,7 +201,10 @@ func (s *Syncer) sync(p *SyncProgress, nodeAddrs []string) {
 	if startHeight > highestHeight {
 		p.StartingBlock = latestBlockHeight + 1
 		p.CurrentBlock = currentHeight
-		log("sync progress skip: start height is over or equal than highest (requested) height")
+
+		logmsg := "sync progress skip: start height is over or equal than highest (requested) height"
+		s.logger.Debug(logmsg,
+			"p.StartingBlock", p.StartingBlock, "cur", p.CurrentBlock, "high", p.HighestBlock)
 		return
 	}
 
@@ -223,7 +219,8 @@ func (s *Syncer) sync(p *SyncProgress, nodeAddrs []string) {
 	p.StartingBlock = startHeight
 	p.CurrentBlock = currentHeight
 
-	log("")
+	s.logger.Info("sync progress",
+		"p.StartingBlock", p.StartingBlock, "cur", p.CurrentBlock, "high", p.HighestBlock)
 }
 
 func (s *Syncer) work(height uint64, nodeAddrs []string) bool {

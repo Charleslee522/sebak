@@ -139,6 +139,8 @@ func createTestNodeRunnersHTTP2Network(n int) (nodeRunners []*NodeRunner, rootKP
 		}
 	}
 
+	rootKP, _ = keypair.Random()
+
 	for _, node := range nodes {
 		policy, _ := consensus.NewDefaultVotingThresholdPolicy(66)
 		networkConfig, _ := network.NewHTTP2NetworkConfigFromEndpoint(node.Alias(), node.Endpoint())
@@ -158,7 +160,7 @@ func createTestNodeRunnersHTTP2Network(n int) (nodeRunners []*NodeRunner, rootKP
 		nodeRunners = append(nodeRunners, nodeRunner)
 	}
 
-	return nodeRunners, block.GenesisKP
+	return nodeRunners, rootKP
 }
 
 func createTestNodeRunnersHTTP2NetworkWithReady(n int) (nodeRunners []*NodeRunner, rootKP *keypair.Full) {

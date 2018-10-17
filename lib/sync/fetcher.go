@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"math/rand"
@@ -12,12 +11,15 @@ import (
 	"net/url"
 	"time"
 
+	"boscoin.io/sebak/lib/ballot"
 	"boscoin.io/sebak/lib/block"
+	"boscoin.io/sebak/lib/error"
 	"boscoin.io/sebak/lib/network"
 	"boscoin.io/sebak/lib/node"
 	"boscoin.io/sebak/lib/node/runner"
 	"boscoin.io/sebak/lib/storage"
 	"boscoin.io/sebak/lib/transaction"
+
 	"github.com/inconshreveable/log15"
 )
 
@@ -136,17 +138,19 @@ func (f *BlockFetcher) fetch(ctx context.Context, si *SyncInfo) error {
 		return err
 	}
 
-	//TODO(anarcher): loggger.Debug insteads .Info
-	f.logger.Info("fetch get items", "items", len(items), "height", height)
+	f.logger.Debug("fetch get items", "items", len(items), "height", height)
 
 	blocks, ok := items[runner.NodeItemBlock]
 	if !ok || len(blocks) <= 0 {
-		err := errors.New("fetch: block not found in resp")
+		err := errors.New("fetch: block not found in response")
 		return err
 	}
 
-	//TODO(anarcher): check items
 	bts, ok := items[runner.NodeItemBlockTransaction]
+	if !ok {
+		err := errors.New("fetch: block transactions not found in response")
+		return err
+	}
 
 	blk := blocks[0].(block.Block)
 	si.Block = &blk
@@ -156,8 +160,7 @@ func (f *BlockFetcher) fetch(ctx context.Context, si *SyncInfo) error {
 	for _, bt := range bts {
 		bt, ok := bt.(block.BlockTransaction)
 		if !ok {
-			//TODO(anarcher): define sential error
-			return errors.New("invalid block transaction")
+			return errors.ErrorInvalidTransaction
 		}
 
 		var tx transaction.Transaction
@@ -175,7 +178,16 @@ func (f *BlockFetcher) fetch(ctx context.Context, si *SyncInfo) error {
 			return err
 		}
 		si.Txs = append(si.Txs, tx)
+	}
 
+	if blk.ProposerTransaction != "" {
+		if tx, ok := txmap[blk.ProposerTransaction]; ok {
+			ptx := &ballot.ProposerTransaction{Transaction: *tx}
+			si.Ptx = ptx
+		} else {
+			err := fmt.Errorf("proposer transactions (%v) not found in transactions", blk.ProposerTransaction)
+			return err
+		}
 	}
 
 	return nil

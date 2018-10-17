@@ -543,10 +543,6 @@ func runNode() error {
 		})
 	}
 	{
-		c := sync.NewConfig([]byte(flagNetworkID), localNode, st, nt, connectionManager, conf)
-		//Place setting config
-		syncer := c.NewSyncer()
-
 		g.Add(func() error {
 			return syncer.Start()
 		}, func(error) {
