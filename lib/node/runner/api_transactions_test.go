@@ -57,6 +57,7 @@ func (p *HelperTestGetNodeTransactionsHandler) Prepare() {
 		nil,
 		NewTestConnectionManager(p.localNode, nil, nil, make(chan struct{}, 100)),
 		common.NewConfig(),
+		nil,
 	)
 	p.consensus = isaac
 

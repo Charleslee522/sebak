@@ -502,6 +502,10 @@ func runNode() error {
 		RateLimitRuleNode: rateLimitRuleNode,
 	}
 	st, err := storage.NewStorage(storageConfig)
+	if err != nil {
+		log.Crit("failed to initialize storage", "error", err)
+		return err
+	}
 
 	c := sync.NewConfig([]byte(flagNetworkID), localNode, st, nt, connectionManager, conf)
 	//Place setting config
@@ -510,7 +514,9 @@ func runNode() error {
 	c.RetryInterval = syncRetryInterval
 	c.CheckBlockHeightInterval = syncCheckInterval
 
-	isaac, err := consensus.NewISAAC([]byte(flagNetworkID), localNode, policy, connectionManager, conf)
+	syncer := c.NewSyncer()
+
+	isaac, err := consensus.NewISAAC([]byte(flagNetworkID), localNode, policy, connectionManager, conf, syncer)
 	if err != nil {
 		log.Crit("failed to launch consensus", "error", err)
 		return err
