@@ -128,7 +128,7 @@ func (v *BlockValidator) finishBlock(ctx context.Context, syncInfo *SyncInfo) er
 		return err
 	}
 
-	v.logger.Info(fmt.Sprintf("finish to sync block height: %v", syncInfo.BlockHeight), "height", syncInfo.BlockHeight, "hash", blk.Hash)
+	v.logger.Debug(fmt.Sprintf("finish to sync block height: %v", syncInfo.BlockHeight), "height", syncInfo.BlockHeight, "hash", blk.Hash)
 
 	if err := ts.Commit(); err != nil {
 		ts.Discard()

@@ -209,7 +209,7 @@ func (s *Syncer) sync(p *SyncProgress, nodeAddrs []string) {
 	}
 
 	for height := startHeight; height <= highestHeight; height++ {
-		s.logger.Info("work height", "height", height)
+		s.logger.Debug("work height", "height", height)
 		// TryAdd for unblocking when the pool is full. Just keep syncprogress for next sync
 		if s.work(height, nodeAddrs) == false {
 			break
@@ -269,7 +269,7 @@ func (s *Syncer) work(height uint64, nodeAddrs []string) bool {
 				s.logger.Debug("stop sync work", "height", height, "err", err)
 			}
 		} else {
-			s.logger.Info("done sync work", "height", height)
+			s.logger.Info("done sync work", "height", height, "hash", syncInfo.Block.Hash)
 		}
 	}
 	return s.workPool.TryAdd(ctx, work)

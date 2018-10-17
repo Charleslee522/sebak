@@ -104,7 +104,7 @@ func (f *BlockFetcher) fetch(ctx context.Context, si *SyncInfo) error {
 	if n == nil {
 		return errors.New("Fetch: node not found")
 	}
-	f.logger.Info(fmt.Sprintf("fetching items from node: %v", n), "fetching_node", n, "height", height)
+	f.logger.Debug(fmt.Sprintf("fetching items from node: %v", n), "fetching_node", n, "height", height)
 
 	apiURL := apiClientURL(n, height)
 	f.logger.Debug("apiClient", "url", apiURL.String())
