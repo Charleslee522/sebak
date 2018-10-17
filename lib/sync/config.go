@@ -30,7 +30,6 @@ type Config struct {
 	FetchTimeout             time.Duration
 	RetryInterval            time.Duration
 	CheckBlockHeightInterval time.Duration
-	Logger                   log15.Logger
 }
 
 func NewConfig(networkID []byte,
@@ -76,5 +75,4 @@ func (c *Config) LoggingConfig() {
 		"retryInterval", c.RetryInterval,
 		"checkInterval", c.CheckBlockHeightInterval,
 	)
-
 }

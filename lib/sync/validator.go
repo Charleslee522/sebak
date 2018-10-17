@@ -116,10 +116,17 @@ func (v *BlockValidator) finishBlock(ctx context.Context, syncInfo *SyncInfo) er
 		return err
 	}
 
-	if err = runner.FinishTransactions(blk, syncInfo.Txs, ts); err != nil {
+	if err := runner.FinishTransactions(blk, syncInfo.Txs, ts); err != nil {
 		ts.Discard()
 		return err
 	}
+
+	ptx := syncInfo.Ptx
+	if err := runner.FinishProposerTransaction(ts, blk, *ptx, v.logger); err != nil {
+		ts.Discard()
+		return err
+	}
+
 	v.logger.Info(fmt.Sprintf("finish to sync block height: %v", syncInfo.BlockHeight), "height", syncInfo.BlockHeight, "hash", blk.Hash)
 
 	if err := ts.Commit(); err != nil {
@@ -157,6 +164,13 @@ func (v *BlockValidator) validateBlock(ctx context.Context, si *SyncInfo, prevBl
 }
 
 func (v *BlockValidator) validateTxs(ctx context.Context, si *SyncInfo) error {
+	// proposer transaction
+	if si.Ptx != nil {
+		if err := si.Ptx.IsWellFormed(v.networkID, v.commonCfg); err != nil {
+			return err
+		}
+	}
+	// transactions
 	for _, tx := range si.Txs {
 		hash := tx.B.MakeHashString()
 		if hash != tx.H.Hash {
@@ -172,6 +186,7 @@ func (v *BlockValidator) validateTxs(ctx context.Context, si *SyncInfo) error {
 			return err
 		}
 	}
+
 	return nil
 }
 

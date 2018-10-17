@@ -51,9 +51,12 @@ func TestBlockFetcher(t *testing.T) {
 	bk := block.TestMakeNewBlock([]string{})
 	bk.Height = uint64(1)
 
+	tx := block.TestMakeNewBlockTransaction([]byte(""), 1)
+
 	apiHandlerFunc := func(req *http.Request) (*http.Response, error) {
 		w := httptest.NewRecorder()
 		renderNodeItem(w, runner.NodeItemBlock, bk)
+		renderNodeItem(w, runner.NodeItemBlockTransaction, tx)
 		resp := w.Result()
 		return resp, nil
 	}
@@ -62,11 +65,12 @@ func TestBlockFetcher(t *testing.T) {
 		f.apiClient = mockDoer{
 			handleFunc: apiHandlerFunc,
 		}
+		//f.logger = log
 	})
 
 	ctx := context.Background()
 	si, err := f.Fetch(ctx, &SyncInfo{BlockHeight: 1})
-	require.Nil(t, err)
+	require.NoError(t, err)
 	require.Equal(t, bk.Hash, si.Block.Hash)
 	require.Equal(t, bk.TransactionsRoot, si.Block.TransactionsRoot)
 }
