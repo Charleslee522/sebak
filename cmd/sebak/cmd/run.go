@@ -510,7 +510,9 @@ func runNode() error {
 	c.RetryInterval = syncRetryInterval
 	c.CheckBlockHeightInterval = syncCheckInterval
 
-	isaac, err := consensus.NewISAAC([]byte(flagNetworkID), localNode, policy, connectionManager, conf)
+	syncer := c.NewSyncer()
+
+	isaac, err := consensus.NewISAAC([]byte(flagNetworkID), localNode, policy, connectionManager, conf, syncer)
 	if err != nil {
 		log.Crit("failed to launch consensus", "error", err)
 		return err
