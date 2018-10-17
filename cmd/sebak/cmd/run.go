@@ -80,7 +80,7 @@ var (
 	localNode         *node.LocalNode
 	rateLimitRuleAPI  common.RateLimitRule
 	rateLimitRuleNode common.RateLimitRule
-	syncPoolSize      int
+	syncPoolSize      uint64
 	syncFetchTimeout  time.Duration
 	syncRetryInterval time.Duration
 	syncCheckInterval time.Duration
@@ -329,11 +329,8 @@ func parseFlagsNode() {
 		threshold = int(tmpUint64)
 	}
 
-	var tmpPoolSize uint64
-	if tmpPoolSize, err = strconv.ParseUint(flagSyncPoolSize, 10, 64); err != nil {
+	if syncPoolSize, err = strconv.ParseUint(flagSyncPoolSize, 10, 64); err != nil {
 		cmdcommon.PrintFlagsError(nodeCmd, "--sync-pool-size", err)
-	} else {
-		syncPoolSize = int(tmpPoolSize)
 	}
 
 	syncRetryInterval = getTimeDuration(flagSyncRetryInterval, sync.RetryInterval, "--sync-retry-interval")

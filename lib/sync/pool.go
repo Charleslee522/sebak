@@ -14,7 +14,7 @@ type Pool struct {
 
 var ErrFinished = errors.New("Add: Pool is finished")
 
-func NewPool(n int) *Pool {
+func NewPool(n uint64) *Pool {
 	work := make(chan func())
 	finish := make(chan struct{})
 	p := &Pool{

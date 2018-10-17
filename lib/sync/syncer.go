@@ -18,7 +18,7 @@ type requestHighestBlock struct {
 }
 
 type Syncer struct {
-	poolSize      int
+	poolSize      uint64
 	fetchTimeout  time.Duration
 	retryInterval time.Duration
 	checkInterval time.Duration

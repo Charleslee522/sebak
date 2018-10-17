@@ -11,10 +11,10 @@ import (
 )
 
 const (
-	SyncPoolSize             = 300
-	FetchTimeout             = 1 * time.Minute
-	RetryInterval            = 10 * time.Second
-	CheckBlockHeightInterval = 30 * time.Second
+	SyncPoolSize             uint64 = 300
+	FetchTimeout                    = 1 * time.Minute
+	RetryInterval                   = 10 * time.Second
+	CheckBlockHeightInterval        = 30 * time.Second
 )
 
 type Config struct {
@@ -26,7 +26,7 @@ type Config struct {
 	logger            log15.Logger
 	commonCfg         common.Config
 
-	SyncPoolSize             int
+	SyncPoolSize             uint64
 	FetchTimeout             time.Duration
 	RetryInterval            time.Duration
 	CheckBlockHeightInterval time.Duration
