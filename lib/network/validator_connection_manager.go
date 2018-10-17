@@ -217,8 +217,8 @@ func (c *ValidatorConnectionManager) Broadcast(message common.Message) {
 }
 
 func (c *ValidatorConnectionManager) GetNode(address string) node.Node {
-	c.Lock()
-	defer c.Unlock()
+	c.RLock()
+	defer c.RUnlock()
 
 	validator, ok := c.validators[address]
 	if !ok {
