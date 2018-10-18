@@ -183,7 +183,7 @@ func (is *ISAAC) GetSyncInfo() (uint64, []string, error) {
 	}
 
 	threshold := is.policy.Threshold()
-	biggestHeight := uint64(1)
+	biggestHeight := common.GenesisBlockHeight
 
 	for height, count := range overHeightCount {
 		if count >= threshold {
@@ -193,8 +193,8 @@ func (is *ISAAC) GetSyncInfo() (uint64, []string, error) {
 		}
 	}
 
-	if biggestHeight <= 1 {
-		return 1, []string{}, nil
+	if biggestHeight <= common.GenesisBlockHeight {
+		return common.GenesisBlockHeight, []string{}, nil
 	}
 
 	nodeAddrs := []string{}
