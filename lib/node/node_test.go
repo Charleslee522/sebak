@@ -20,18 +20,11 @@ func TestNodeStateChange(t *testing.T) {
 
 	require.Equal(t, StateCONSENSUS, node.State())
 
-	node.SetBooting()
-	require.Equal(t, StateBOOTING, node.State())
-
 	node.SetSync()
 	require.Equal(t, StateSYNC, node.State())
 
 	node.SetConsensus()
 	require.Equal(t, StateCONSENSUS, node.State())
-
-	node.SetTerminating()
-	require.Equal(t, StateTERMINATING, node.State())
-
 }
 
 func TestNodeMarshalJSON(t *testing.T) {
@@ -47,25 +40,15 @@ func TestNodeMarshalJSON(t *testing.T) {
 	jsonStr := `"endpoint":"https://localhost:5000","state":"%s"`
 	require.Equal(t, true, strings.Contains(string(tmpByte), fmt.Sprintf(jsonStr, "CONSENSUS")))
 
-	marshalNode.SetBooting()
-	tmpByte, err = marshalNode.MarshalJSON()
-	require.Equal(t, nil, err)
-	require.Equal(t, true, strings.Contains(string(tmpByte), fmt.Sprintf(jsonStr, "BOOTING")))
-
-	marshalNode.SetSync()
-	tmpByte, err = marshalNode.MarshalJSON()
-	require.Equal(t, nil, err)
-	require.Equal(t, true, strings.Contains(string(tmpByte), fmt.Sprintf(jsonStr, "SYNC")))
-
 	marshalNode.SetConsensus()
 	tmpByte, err = marshalNode.MarshalJSON()
 	require.Equal(t, nil, err)
 	require.Equal(t, true, strings.Contains(string(tmpByte), fmt.Sprintf(jsonStr, "CONSENSUS")))
 
-	marshalNode.SetTerminating()
+	marshalNode.SetSync()
 	tmpByte, err = marshalNode.MarshalJSON()
 	require.Equal(t, nil, err)
-	require.Equal(t, true, strings.Contains(string(tmpByte), fmt.Sprintf(jsonStr, "TERMINATING")))
+	require.Equal(t, true, strings.Contains(string(tmpByte), fmt.Sprintf(jsonStr, "SYNC")))
 }
 
 func TestNodeMarshalJSONWithValidator(t *testing.T) {
@@ -94,8 +77,9 @@ func TestNodeMarshalJSONWithValidator(t *testing.T) {
 	require.Equal(t, nil, err)
 
 	t.Log(string(tmpByte))
-	jsonStr := `"alias":"%s","endpoint":"https://localhost:%s","state":"%s"`
-	require.Equal(t, true, strings.Contains(string(tmpByte), fmt.Sprintf(jsonStr, "node", "5000", "CONSENSUS")))
-	require.Equal(t, true, strings.Contains(string(tmpByte), fmt.Sprintf(jsonStr, "v1", "5001", "NONE")))
-	require.Equal(t, true, strings.Contains(string(tmpByte), fmt.Sprintf(jsonStr, "v2", "5002", "NONE")))
+	jsonNodeStr := `"alias":"%s","endpoint":"https://localhost:%s","state":"%s"`
+	jsonValidatorStr := `"alias":"%s","endpoint":"https://localhost:%s"`
+	require.Equal(t, true, strings.Contains(string(tmpByte), fmt.Sprintf(jsonNodeStr, "node", "5000", "CONSENSUS")))
+	require.Equal(t, true, strings.Contains(string(tmpByte), fmt.Sprintf(jsonValidatorStr, "v1", "5001")))
+	require.Equal(t, true, strings.Contains(string(tmpByte), fmt.Sprintf(jsonValidatorStr, "v2", "5002")))
 }

@@ -185,9 +185,6 @@ func (sm *ISAACStateManager) Start() {
 					sm.transitSignal()
 					sm.SetBlockTimeBuffer()
 					sm.NextHeight()
-				case ballot.StateNONE:
-					timer.Reset(sm.Conf.TimeoutINIT)
-					log.Error("Wrong ISAACState", "ISAACState", state)
 				}
 
 			case <-sm.stop:
