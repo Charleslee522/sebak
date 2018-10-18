@@ -445,10 +445,6 @@ func (nr *NodeRunner) handleBallotMessage(message common.NetworkMessage) (err er
 
 func (nr *NodeRunner) InitRound() {
 	// get latest blocks
-	latestBlock := block.GetLatestBlock(nr.storage)
-
-	nr.log.Info("getLatestBlock in NodeRunner.InitRound", "height", latestBlock.Height)
-	nr.consensus.SetLatestBlock(latestBlock)
 	nr.consensus.SetLatestRound(round.Round{})
 
 	ticker := time.NewTicker(time.Millisecond * 5)
