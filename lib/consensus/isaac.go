@@ -13,6 +13,7 @@ import (
 	"boscoin.io/sebak/lib/consensus/round"
 	"boscoin.io/sebak/lib/network"
 	"boscoin.io/sebak/lib/node"
+	"boscoin.io/sebak/lib/storage"
 	"boscoin.io/sebak/lib/transaction"
 )
 
@@ -25,6 +26,7 @@ type ISAAC struct {
 
 	latestBlock         block.Block
 	connectionManager   network.ConnectionManager
+	storage             *storage.LevelDBBackend
 	proposerSelector    ProposerSelector
 	log                 logging.Logger
 	policy              ballot.VotingThresholdPolicy
@@ -44,7 +46,7 @@ type ISAAC struct {
 // ISAAC should know network.ConnectionManager
 // because the ISAAC uses connected validators when calculating proposer
 func NewISAAC(networkID []byte, node *node.LocalNode, p ballot.VotingThresholdPolicy,
-	cm network.ConnectionManager, conf common.Config, syncer SyncController) (is *ISAAC, err error) {
+	cm network.ConnectionManager, st *storage.LevelDBBackend, conf common.Config, syncer SyncController) (is *ISAAC, err error) {
 
 	is = &ISAAC{
 		NetworkID:         networkID,
@@ -53,6 +55,7 @@ func NewISAAC(networkID []byte, node *node.LocalNode, p ballot.VotingThresholdPo
 		TransactionPool:   transaction.NewPool(),
 		RunningRounds:     map[string]*RunningRound{},
 		connectionManager: cm,
+		storage:           st,
 		proposerSelector:  SequentialSelector{cm},
 		Conf:              conf,
 		log:               log.New(logging.Ctx{"node": node.Alias()}),
@@ -103,12 +106,6 @@ func (is *ISAAC) CloseConsensus(proposer string, round round.Round, vh ballot.Vo
 	return
 }
 
-func (is *ISAAC) SetLatestBlock(block block.Block) {
-	is.Lock()
-	defer is.Unlock()
-	is.latestBlock = block
-}
-
 func (is *ISAAC) SetLatestRound(round round.Round) {
 	is.LatestRound = round
 }
@@ -129,13 +126,13 @@ func (is *ISAAC) SaveNodeHeight(senderAddr string, height uint64) {
 	is.nodesHeight[senderAddr] = height
 }
 
-func (is *ISAAC) IsAvailableRound(round round.Round) bool {
-	if round.BlockHeight == is.latestBlock.Height {
+func (is *ISAAC) IsAvailableRound(round round.Round, latestBlock block.Block) bool {
+	if round.BlockHeight == latestBlock.Height {
 		if is.isInitRound(round) {
 			return true
 		}
 
-		if round.BlockHash != is.latestBlock.Hash {
+		if round.BlockHash != latestBlock.Hash {
 			return false
 		}
 
@@ -296,5 +293,5 @@ func (is *ISAAC) HasSameProposer(b ballot.Ballot) bool {
 func (is *ISAAC) LatestBlock() block.Block {
 	is.RLock()
 	defer is.RUnlock()
-	return is.latestBlock
+	return block.GetLatestBlock(is.storage)
 }
