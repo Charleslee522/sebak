@@ -13,6 +13,7 @@ import (
 
 	"boscoin.io/sebak/lib/ballot"
 	"boscoin.io/sebak/lib/block"
+	"boscoin.io/sebak/lib/common"
 	"boscoin.io/sebak/lib/error"
 	"boscoin.io/sebak/lib/network"
 	"boscoin.io/sebak/lib/node"
@@ -109,15 +110,17 @@ func (f *BlockFetcher) fetch(ctx context.Context, si *SyncInfo) error {
 	apiURL := apiClientURL(n, height)
 	f.logger.Debug("apiClient", "url", apiURL.String())
 
-	req, err := http.NewRequest("GET", apiURL.String(), nil)
+	client, err := common.NewHTTP2Client(f.fetchTimeout, 0, true)
 	if err != nil {
 		return err
 	}
 
-	ctx, cancelF := context.WithTimeout(ctx, f.fetchTimeout)
-	defer cancelF()
+	defer client.Close()
+	resp, err := client.Get(apiURL.String(), nil)
+	if err != nil {
+		return err
+	}
 
-	resp, err := f.apiClient.Do(req)
 	defer func() {
 		if resp != nil && resp.Body != nil {
 			resp.Body.Close()
