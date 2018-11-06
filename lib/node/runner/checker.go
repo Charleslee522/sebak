@@ -562,7 +562,7 @@ func FinishedBallotStore(c common.Checker, args ...interface{}) (err error) {
 	if !checker.VotingFinished {
 		return
 	}
-	ballotRound := checker.Ballot.VotingBasis()
+	ballotVotingBasis := checker.Ballot.VotingBasis()
 	if checker.FinishedVotingHole == voting.YES {
 		if err = getMissingTransaction(checker); err != nil {
 			checker.Log.Debug("failed to get the missing transactions of ballot", "error", err)
@@ -598,7 +598,7 @@ func FinishedBallotStore(c common.Checker, args ...interface{}) (err error) {
 
 		checker.Log.Debug("ballot was stored", "block", *theBlock)
 		checker.NodeRunner.SavingBlockOperations().Save(*theBlock)
-		checker.NodeRunner.TransitISAACState(ballotRound, ballot.StateALLCONFIRM)
+		checker.NodeRunner.TransitISAACState(ballotVotingBasis, ballot.StateALLCONFIRM)
 
 		err = NewCheckerStopCloseConsensus(checker, "ballot got consensus and will be stored")
 	} else {
@@ -608,7 +608,7 @@ func FinishedBallotStore(c common.Checker, args ...interface{}) (err error) {
 
 	checker.NodeRunner.Consensus().CloseConsensus(
 		checker.Ballot.Proposer(),
-		ballotRound,
+		ballotVotingBasis,
 		checker.FinishedVotingHole,
 		checker.NodeRunner.TransactionPool,
 	)
