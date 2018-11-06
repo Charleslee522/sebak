@@ -227,7 +227,7 @@ func BallotCheckSYNC(c common.Checker, args ...interface{}) error {
 		}
 
 		checker.LocalNode.SetConsensus()
-		checker.NodeRunner.TransitISAACState(b.VotingBasis(), ballot.StateALLCONFIRM)
+		checker.NodeRunner.TransitISAACState(ballot.StateALLCONFIRM)
 		return NewCheckerStopCloseConsensus(checker, "ballot got consensus")
 	}
 }
@@ -244,9 +244,8 @@ func hasBallotValidProposer(is *consensus.ISAAC, b ballot.Ballot) bool {
 // valid round.
 func BallotAlreadyFinished(c common.Checker, args ...interface{}) (err error) {
 	checker := c.(*BallotChecker)
-	ballotRound := checker.Ballot.VotingBasis()
 	if !checker.NodeRunner.Consensus().IsAvailableRound(
-		ballotRound,
+		checker.Ballot.VotingBasis(),
 		block.GetLatestBlock(checker.NodeRunner.Storage()),
 	) {
 		err = errors.BallotAlreadyFinished
@@ -514,7 +513,7 @@ func SIGNBallotBroadcast(c common.Checker, args ...interface{}) (err error) {
 // TransitStateToSIGN changes ISAACState to SIGN
 func TransitStateToSIGN(c common.Checker, args ...interface{}) (err error) {
 	checker := c.(*BallotChecker)
-	checker.NodeRunner.TransitISAACState(checker.Ballot.VotingBasis(), ballot.StateSIGN)
+	checker.NodeRunner.TransitISAACState(ballot.StateSIGN)
 
 	return
 }
@@ -549,7 +548,7 @@ func TransitStateToACCEPT(c common.Checker, args ...interface{}) (err error) {
 	if !checker.VotingFinished {
 		return
 	}
-	checker.NodeRunner.TransitISAACState(checker.Ballot.VotingBasis(), ballot.StateACCEPT)
+	checker.NodeRunner.TransitISAACState(ballot.StateACCEPT)
 
 	return
 }
@@ -598,11 +597,10 @@ func FinishedBallotStore(c common.Checker, args ...interface{}) (err error) {
 
 		checker.Log.Debug("ballot was stored", "block", *theBlock)
 		checker.NodeRunner.SavingBlockOperations().Save(*theBlock)
-		checker.NodeRunner.TransitISAACState(ballotVotingBasis, ballot.StateALLCONFIRM)
+		checker.NodeRunner.isaacStateManager.Confirm()
 
 		err = NewCheckerStopCloseConsensus(checker, "ballot got consensus and will be stored")
 	} else {
-		checker.NodeRunner.isaacStateManager.IncreaseRound()
 		err = NewCheckerStopCloseConsensus(checker, "ballot got consensus")
 	}
 

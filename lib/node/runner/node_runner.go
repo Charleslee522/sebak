@@ -483,7 +483,7 @@ func (nr *NodeRunner) handleBallotMessage(message common.NetworkMessage) (err er
 
 func (nr *NodeRunner) InitRound() {
 	// get latest blocks
-	nr.consensus.SetLatestRound(voting.Basis{})
+	nr.consensus.SetLatestRound(common.StartRound)
 
 	nr.waitForConnectingEnoughNodes()
 	nr.StartStateManager()
@@ -514,7 +514,7 @@ func (nr *NodeRunner) StartStateManager() {
 	}
 
 	nr.isaacStateManager.Start()
-	nr.isaacStateManager.NextHeight()
+	nr.TransitISAACState(ballot.StateINIT)
 	return
 }
 
@@ -524,8 +524,8 @@ func (nr *NodeRunner) StopStateManager() {
 	return
 }
 
-func (nr *NodeRunner) TransitISAACState(basis voting.Basis, ballotState ballot.State) {
-	nr.isaacStateManager.TransitISAACState(basis.Height, basis.Round, ballotState)
+func (nr *NodeRunner) TransitISAACState(ballotState ballot.State) {
+	nr.isaacStateManager.TransitISAACState(ballotState)
 }
 
 var NewBallotTransactionCheckerFuncs = []common.CheckerFunc{
@@ -534,10 +534,11 @@ var NewBallotTransactionCheckerFuncs = []common.CheckerFunc{
 	BallotTransactionsSourceCheck,
 }
 
-func (nr *NodeRunner) proposeNewBallot(round uint64) (ballot.Ballot, error) {
+func (nr *NodeRunner) proposeNewBallot() (ballot.Ballot, error) {
 	b := nr.consensus.LatestBlock()
+	r := nr.consensus.LatestRound()
 	basis := voting.Basis{
-		Round:     round,
+		Round:     r,
 		Height:    b.Height,
 		BlockHash: b.Hash,
 		TotalTxs:  b.TotalTxs,
@@ -568,7 +569,7 @@ func (nr *NodeRunner) proposeNewBallot(round uint64) (ballot.Ballot, error) {
 	// remove invalid transactions
 	nr.TransactionPool.Remove(transactionsChecker.InvalidTransactions()...)
 
-	proposerAddr := nr.consensus.SelectProposer(b.Height, round)
+	proposerAddr := nr.consensus.SelectProposer(b.Height, r)
 	theBallot := ballot.NewBallot(nr.localNode.Address(), proposerAddr, basis, transactionsChecker.ValidTransactions)
 	theBallot.SetVote(ballot.StateINIT, voting.YES)
 

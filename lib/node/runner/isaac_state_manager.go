@@ -7,7 +7,6 @@ import (
 	"boscoin.io/sebak/lib/ballot"
 	"boscoin.io/sebak/lib/block"
 	"boscoin.io/sebak/lib/common"
-	"boscoin.io/sebak/lib/consensus"
 	"boscoin.io/sebak/lib/voting"
 )
 
@@ -17,28 +16,24 @@ type ISAACStateManager struct {
 	sync.RWMutex
 
 	nr              *NodeRunner
-	state           consensus.ISAACState
-	stateTransit    chan consensus.ISAACState
+	state           ballot.State
+	stateTransit    chan ballot.State
 	stop            chan struct{}
-	blockTimeBuffer time.Duration              // the time to wait to adjust the block creation time.
-	transitSignal   func(consensus.ISAACState) // the function is called when the ISAACState is changed.
-	genesis         time.Time                  // the time at which the GenesisBlock was saved. It is used for calculating `blockTimeBuffer`.
+	blockTimeBuffer time.Duration      // the time to wait to adjust the block creation time.
+	transitSignal   func(ballot.State) // the function is called when the ISAACState is changed.
+	genesis         time.Time          // the time at which the GenesisBlock was saved. It is used for calculating `blockTimeBuffer`.
 
 	Conf common.Config
 }
 
 func NewISAACStateManager(nr *NodeRunner, conf common.Config) *ISAACStateManager {
 	p := &ISAACStateManager{
-		nr: nr,
-		state: consensus.ISAACState{
-			Round:       0,
-			Height:      0,
-			BallotState: ballot.StateINIT,
-		},
-		stateTransit:    make(chan consensus.ISAACState),
+		nr:              nr,
+		state:           ballot.StateINIT,
+		stateTransit:    make(chan ballot.State),
 		stop:            make(chan struct{}),
 		blockTimeBuffer: 2 * time.Second,
-		transitSignal:   func(consensus.ISAACState) {},
+		transitSignal:   func(ballot.State) {},
 		Conf:            conf,
 	}
 
@@ -49,7 +44,7 @@ func NewISAACStateManager(nr *NodeRunner, conf common.Config) *ISAACStateManager
 }
 
 func (sm *ISAACStateManager) SetBlockTimeBuffer() {
-	sm.nr.Log().Debug("begin ISAACStateManager.SetBlockTimeBuffer()", "ISAACState", sm.State())
+	sm.nr.Log().Debug("ISAACStateManager.SetBlockTimeBuffer()", "height", sm.nr.consensus.LatestBlock().Height)
 	b := sm.nr.Consensus().LatestBlock()
 	ballotProposedTime := getBallotProposedTime(b.Confirmed)
 	sm.blockTimeBuffer = calculateBlockTimeBuffer(
@@ -111,40 +106,23 @@ func calculateBlockTimeBuffer(goal, average, untilNow, delta time.Duration) time
 	return blockTimeBuffer
 }
 
-func (sm *ISAACStateManager) SetTransitSignal(f func(consensus.ISAACState)) {
+func (sm *ISAACStateManager) SetTransitSignal(f func(ballot.State)) {
 	sm.Lock()
 	defer sm.Unlock()
 	sm.transitSignal = f
 }
 
-func (sm *ISAACStateManager) TransitISAACState(height uint64, round uint64, ballotState ballot.State) {
-	sm.RLock()
-	current := sm.state
-	sm.RUnlock()
-
-	target := consensus.ISAACState{
-		Height:      height,
-		Round:       round,
-		BallotState: ballotState,
-	}
-
-	if current.IsLater(target) {
-		go func() {
-			sm.stateTransit <- target
-		}()
-	}
+func (sm *ISAACStateManager) TransitISAACState(ballotState ballot.State) {
+	go func() {
+		sm.stateTransit <- ballotState
+	}()
 }
 
-func (sm *ISAACStateManager) IncreaseRound() {
-	state := sm.State()
-	sm.nr.Log().Debug("begin ISAACStateManager.IncreaseRound()", "height", state.Height, "round", state.Round, "state", state.BallotState)
-	sm.TransitISAACState(state.Height, state.Round+1, ballot.StateINIT)
-}
-
-func (sm *ISAACStateManager) NextHeight() {
-	state := sm.State()
-	sm.nr.Log().Debug("begin ISAACStateManager.NextHeight()", "height", state.Height, "round", state.Round, "state", state.BallotState)
-	sm.TransitISAACState(state.Height+1, 0, ballot.StateINIT)
+func (sm *ISAACStateManager) Confirm() {
+	h := sm.nr.consensus.LatestBlock().Height
+	r := sm.nr.consensus.LatestRound()
+	sm.nr.Log().Debug("ISAACStateManager.Confirm()", "height", h, "round", r)
+	sm.TransitISAACState(ballot.StateALLCONFIRM)
 }
 
 // In `Start()` method a node proposes ballot.
@@ -152,25 +130,26 @@ func (sm *ISAACStateManager) NextHeight() {
 // And it manages the node round.
 func (sm *ISAACStateManager) Start() {
 	sm.nr.localNode.SetConsensus()
-	sm.nr.Log().Debug("begin ISAACStateManager.Start()", "ISAACState", sm.State())
+	sm.nr.Log().Debug("ISAACStateManager.Start()", "ISAACState", sm.state)
 	go func() {
 		timer := time.NewTimer(time.Duration(1 * time.Hour))
 		for {
 			select {
 			case <-timer.C:
-				sm.nr.Log().Debug("timeout", "ISAACState", sm.State())
-				if sm.State().BallotState == ballot.StateACCEPT {
+				sm.nr.Log().Debug("timeout", "ISAACState", sm.state)
+				if sm.state == ballot.StateACCEPT {
 					sm.SetBlockTimeBuffer()
-					sm.IncreaseRound()
+					sm.nr.consensus.SetLatestRound(sm.nr.consensus.LatestRound())
+					sm.TransitISAACState(ballot.StateINIT)
 					break
 				}
-				go sm.broadcastExpiredBallot(sm.State())
-				sm.setBallotState(sm.State().BallotState.Next())
-				sm.resetTimer(timer, sm.State().BallotState)
-				sm.transitSignal(sm.State())
+				go sm.broadcastExpiredBallot(sm.state)
+				sm.setState(sm.state.Next())
+				sm.resetTimer(timer, sm.state)
+				sm.transitSignal(sm.state)
 
 			case state := <-sm.stateTransit:
-				switch state.BallotState {
+				switch state {
 				case ballot.StateINIT:
 					sm.proposeOrWait(timer, state)
 				case ballot.StateSIGN:
@@ -185,7 +164,7 @@ func (sm *ISAACStateManager) Start() {
 					sm.setState(state)
 					sm.transitSignal(state)
 					sm.SetBlockTimeBuffer()
-					sm.NextHeight()
+					sm.TransitISAACState(ballot.StateINIT)
 				}
 
 			case <-sm.stop:
@@ -195,21 +174,22 @@ func (sm *ISAACStateManager) Start() {
 	}()
 }
 
-func (sm *ISAACStateManager) broadcastExpiredBallot(state consensus.ISAACState) {
-	sm.nr.Log().Debug("begin broadcastExpiredBallot", "ISAACState", state)
+func (sm *ISAACStateManager) broadcastExpiredBallot(state ballot.State) {
+	sm.nr.Log().Debug("broadcastExpiredBallot", "ISAACState", state)
 	b := sm.nr.consensus.LatestBlock()
+	r := sm.nr.consensus.LatestRound()
 	basis := voting.Basis{
-		Round:     state.Round,
+		Round:     r + 1,
 		Height:    b.Height,
 		BlockHash: b.Hash,
 		TotalTxs:  b.TotalTxs,
 		TotalOps:  b.TotalOps,
 	}
 
-	proposerAddr := sm.nr.consensus.SelectProposer(b.Height, state.Round)
+	proposerAddr := sm.nr.consensus.SelectProposer(b.Height, r)
 
 	newExpiredBallot := ballot.NewBallot(sm.nr.localNode.Address(), proposerAddr, basis, []string{})
-	newExpiredBallot.SetVote(state.BallotState.Next(), voting.EXP)
+	newExpiredBallot.SetVote(state.Next(), voting.EXP)
 
 	opc, _ := ballot.NewCollectTxFeeFromBallot(*newExpiredBallot, sm.nr.CommonAccountAddress)
 	opi, _ := ballot.NewInflationFromBallot(*newExpiredBallot, sm.nr.CommonAccountAddress, sm.nr.InitialBalance)
@@ -237,17 +217,19 @@ func (sm *ISAACStateManager) resetTimer(timer *time.Timer, state ballot.State) {
 // In proposeOrWait,
 // if nr.localNode is proposer, it proposes new ballot,
 // but if not, it waits for receiving ballot from the other proposer.
-func (sm *ISAACStateManager) proposeOrWait(timer *time.Timer, state consensus.ISAACState) {
+func (sm *ISAACStateManager) proposeOrWait(timer *time.Timer, state ballot.State) {
 	timer.Reset(time.Duration(1 * time.Hour))
-	proposer := sm.nr.Consensus().SelectProposer(state.Height, state.Round)
+	h := sm.nr.consensus.LatestBlock().Height
+	r := sm.nr.consensus.LatestRound()
+	proposer := sm.nr.Consensus().SelectProposer(h, r)
 	log.Debug("selected proposer", "proposer", proposer)
 
 	if proposer == sm.nr.localNode.Address() {
 		time.Sleep(sm.blockTimeBuffer)
-		if _, err := sm.nr.proposeNewBallot(state.Round); err == nil {
-			log.Debug("propose new ballot", "proposer", proposer, "round", state.Round, "ballotState", ballot.StateSIGN)
+		if _, err := sm.nr.proposeNewBallot(); err == nil {
+			log.Debug("propose new ballot", "proposer", proposer, "round", r, "ballotState", ballot.StateSIGN)
 		} else {
-			log.Error("failed to proposeNewBallot", "height", sm.nr.consensus.LatestBlock().Height, "error", err)
+			log.Error("failed to proposeNewBallot", "height", h, "error", err)
 		}
 		timer.Reset(sm.Conf.TimeoutINIT)
 	} else {
@@ -257,28 +239,24 @@ func (sm *ISAACStateManager) proposeOrWait(timer *time.Timer, state consensus.IS
 	sm.transitSignal(state)
 }
 
-func (sm *ISAACStateManager) State() consensus.ISAACState {
-	sm.RLock()
-	defer sm.RUnlock()
-	return sm.state
-}
-
-func (sm *ISAACStateManager) setState(state consensus.ISAACState) {
+func (sm *ISAACStateManager) setState(state ballot.State) {
 	sm.Lock()
 	defer sm.Unlock()
-	sm.nr.Log().Debug("begin ISAACStateManager.setState()", "state", state)
+
+	sm.nr.Log().Debug("ISAACStateManager.setState()", "state", state)
+
 	sm.state = state
 
 	return
 }
 
-func (sm *ISAACStateManager) setBallotState(ballotState ballot.State) {
-	sm.Lock()
-	defer sm.Unlock()
-	sm.nr.Log().Debug("begin ISAACStateManager.setBallotState()", "ballotState", ballotState)
-	sm.state.BallotState = ballotState
+func (sm *ISAACStateManager) State() ballot.State {
+	sm.RLock()
+	defer sm.RUnlock()
 
-	return
+	sm.nr.Log().Debug("ISAACStateManager.State()", "state", sm.state)
+
+	return sm.state
 }
 
 func (sm *ISAACStateManager) Stop() {

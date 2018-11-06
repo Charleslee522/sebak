@@ -74,8 +74,7 @@ func TestUnfreezingSimulation(t *testing.T) {
 	tx6, _ := GetUnfreezingTransaction(kpFrozenAccount, kpNewAccount, uint64(1), uint64(99999980000))
 
 	nr.TransactionPool.Add(tx6)
-	roundNumber := uint64(0)
-	_, err := nr.proposeNewBallot(roundNumber)
+	_, err := nr.proposeNewBallot()
 	require.NoError(t, err)
 
 	require.False(t, nr.TransactionPool.Has(tx6.GetHash()))
@@ -115,7 +114,7 @@ func MakeConsensusAndBlock(t *testing.T, tx transaction.Transaction, nr *NodeRun
 
 	// Generate proposed ballot in nodeRunner
 	round := uint64(0)
-	_, err := nr.proposeNewBallot(round)
+	_, err := nr.proposeNewBallot()
 	require.NoError(t, err)
 
 	b := nr.Consensus().LatestBlock()

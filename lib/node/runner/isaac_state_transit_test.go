@@ -9,7 +9,6 @@ import (
 
 	"boscoin.io/sebak/lib/ballot"
 	"boscoin.io/sebak/lib/common"
-	"boscoin.io/sebak/lib/consensus"
 	"boscoin.io/sebak/lib/voting"
 )
 
@@ -86,10 +85,10 @@ func TestStateINITTimeoutNotProposer(t *testing.T) {
 
 	nr.StartStateManager()
 	defer nr.StopStateManager()
-	require.Equal(t, ballot.StateINIT, nr.isaacStateManager.State().BallotState)
+	require.Equal(t, ballot.StateINIT, nr.isaacStateManager.State())
 
 	<-recv
-	require.Equal(t, ballot.StateSIGN, nr.isaacStateManager.State().BallotState)
+	require.Equal(t, ballot.StateSIGN, nr.isaacStateManager.State())
 
 	require.Equal(t, 1, len(cm.Messages()))
 	init, sign, accept := 0, 0, 0
@@ -134,16 +133,15 @@ func TestStateSIGNTimeoutProposer(t *testing.T) {
 	nr.StartStateManager()
 	defer nr.StopStateManager()
 
-	require.Equal(t, ballot.StateINIT, nr.isaacStateManager.State().BallotState)
+	require.Equal(t, ballot.StateINIT, nr.isaacStateManager.State())
 
 	<-recv
 	require.Equal(t, 1, len(cm.Messages()))
 
-	state := nr.isaacStateManager.State()
-	nr.isaacStateManager.TransitISAACState(state.Height, state.Round, ballot.StateSIGN)
+	nr.isaacStateManager.TransitISAACState(ballot.StateSIGN)
 
 	<-recv
-	require.Equal(t, ballot.StateACCEPT, nr.isaacStateManager.State().BallotState)
+	require.Equal(t, ballot.StateACCEPT, nr.isaacStateManager.State())
 	require.Equal(t, 2, len(cm.Messages()))
 
 	init, sign, accept := 0, 0, 0
@@ -255,8 +253,7 @@ func TestStateACCEPTTimeoutProposerThenNotProposer(t *testing.T) {
 	<-recv
 	require.Equal(t, 1, len(cm.Messages()))
 
-	state := nr.isaacStateManager.State()
-	nr.isaacStateManager.TransitISAACState(state.Height, state.Round, ballot.StateSIGN)
+	nr.isaacStateManager.TransitISAACState(ballot.StateSIGN)
 
 	<-recv
 	require.Equal(t, 2, len(cm.Messages()))
@@ -299,8 +296,8 @@ func TestStateTransitFromTimeoutInitToAccept(t *testing.T) {
 	nr, _, _ := createNodeRunnerForTesting(3, conf, recvBroadcast)
 	nr.Consensus().SetProposerSelector(OtherSelector{nr.ConnectionManager()})
 
-	recvTransit := make(chan consensus.ISAACState)
-	nr.isaacStateManager.SetTransitSignal(func(state consensus.ISAACState) {
+	recvTransit := make(chan ballot.State)
+	nr.isaacStateManager.SetTransitSignal(func(state ballot.State) {
 		recvTransit <- state
 	})
 
@@ -311,16 +308,11 @@ func TestStateTransitFromTimeoutInitToAccept(t *testing.T) {
 	defer nr.StopStateManager()
 	<-recvTransit
 	state := nr.isaacStateManager.State()
-	require.Equal(t, ballot.StateINIT, state.BallotState)
+	require.Equal(t, ballot.StateINIT, state)
 
-	basis := voting.Basis{
-		Height: state.Height,
-		Round:  state.Round,
-	}
-
-	nr.TransitISAACState(basis, ballot.StateSIGN)
+	nr.TransitISAACState(ballot.StateSIGN)
 	<-recvTransit
-	require.Equal(t, ballot.StateSIGN, nr.isaacStateManager.State().BallotState)
+	require.Equal(t, ballot.StateSIGN, nr.isaacStateManager.State())
 
 	<-recvBroadcast
 	require.Equal(t, 1, len(cm.Messages()))
@@ -364,14 +356,7 @@ func TestStateTransitFromTimeoutSignToAccept(t *testing.T) {
 		require.Equal(t, voting.YES, b.Vote())
 	}
 
-	state := nr.isaacStateManager.State()
-
-	basis := voting.Basis{
-		Height: state.Height,
-		Round:  state.Round,
-	}
-
-	nr.TransitISAACState(basis, ballot.StateACCEPT)
+	nr.TransitISAACState(ballot.StateACCEPT)
 	<-recv
 
 	require.Equal(t, 2, len(cm.Messages()))

@@ -35,7 +35,7 @@ func TestISAACSimulationProposer(t *testing.T) {
 
 	// Generate proposed ballot in nr
 	roundNumber := uint64(0)
-	_, err = nr.proposeNewBallot(roundNumber)
+	_, err = nr.proposeNewBallot()
 	require.NoError(t, err)
 
 	b := nr.Consensus().LatestBlock()

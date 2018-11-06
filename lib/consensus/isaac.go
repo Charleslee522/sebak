@@ -39,7 +39,7 @@ type ISAAC struct {
 	NetworkID     []byte
 	Node          *node.LocalNode
 	RunningRounds map[ /* Round.Index() */ string]*RunningRound
-	LatestRound   voting.Basis
+	latestRound   uint64
 	Conf          common.Config
 }
 
@@ -70,7 +70,7 @@ func (is *ISAAC) CloseConsensus(proposer string, basis voting.Basis, vh voting.H
 	is.Lock()
 	defer is.Unlock()
 
-	is.SetLatestRound(basis)
+	is.SetLatestRound(basis.Round)
 
 	if vh == voting.NOTYET {
 		err = errors.New("invalid voting.Hole, `voting.NOTYET`")
@@ -107,8 +107,17 @@ func (is *ISAAC) CloseConsensus(proposer string, basis voting.Basis, vh voting.H
 	return
 }
 
-func (is *ISAAC) SetLatestRound(round voting.Basis) {
-	is.LatestRound = round
+func (is *ISAAC) SetLatestRound(round uint64) {
+	is.latestRound = round
+
+	return
+}
+
+func (is *ISAAC) LatestRound() uint64 {
+	is.RLock()
+	defer is.RUnlock()
+
+	return is.latestRound
 }
 
 func (is *ISAAC) SetProposerSelector(p ProposerSelector) {
@@ -127,20 +136,18 @@ func (is *ISAAC) SaveNodeHeight(senderAddr string, height uint64) {
 	is.nodesHeight[senderAddr] = height
 }
 
-func (is *ISAAC) IsAvailableRound(round voting.Basis, latestBlock block.Block) bool {
-	if round.Height == latestBlock.Height {
-		if is.isInitRound(round) {
+func (is *ISAAC) IsAvailableRound(basis voting.Basis, latestBlock block.Block) bool {
+	if basis.Height == latestBlock.Height {
+		if is.isInitRound(basis) {
 			return true
 		}
 
-		if round.BlockHash != latestBlock.Hash {
+		if basis.BlockHash != latestBlock.Hash {
 			return false
 		}
 
-		if round.Height == is.LatestRound.Height {
-			if round.Round <= is.LatestRound.Round {
-				return false
-			}
+		if basis.Round <= is.latestRound {
+			return false
 		}
 		return true
 	}
@@ -148,8 +155,8 @@ func (is *ISAAC) IsAvailableRound(round voting.Basis, latestBlock block.Block) b
 	return false
 }
 
-func (is *ISAAC) isInitRound(round voting.Basis) bool {
-	return is.LatestRound.BlockHash == "" && round.Height == common.GenesisBlockHeight
+func (is *ISAAC) isInitRound(basis voting.Basis) bool {
+	return basis.Height == common.GenesisBlockHeight
 }
 
 func (is *ISAAC) StartSync(height uint64, nodeAddrs []string) {

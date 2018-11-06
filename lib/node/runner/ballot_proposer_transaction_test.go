@@ -10,7 +10,6 @@ import (
 	"boscoin.io/sebak/lib/block"
 	"boscoin.io/sebak/lib/common"
 	"boscoin.io/sebak/lib/common/keypair"
-	"boscoin.io/sebak/lib/consensus"
 	"boscoin.io/sebak/lib/errors"
 	"boscoin.io/sebak/lib/node"
 	"boscoin.io/sebak/lib/transaction"
@@ -882,6 +881,7 @@ func TestCheckInflationBlockIncrease(t *testing.T) {
 	nr := nodeRunners[0]
 
 	nr.ISAACStateManager().Conf.BlockTime = 0
+
 	validators := nr.ConnectionManager().AllValidators()
 	require.Equal(t, 1, len(validators))
 	require.Equal(t, nr.localNode.Address(), validators[0])
@@ -895,27 +895,36 @@ func TestCheckInflationBlockIncrease(t *testing.T) {
 
 	require.Equal(t, common.Amount(0), getCommonAccountBalance())
 
-	recv := make(chan consensus.ISAACState)
-	nr.ISAACStateManager().SetTransitSignal(func(state consensus.ISAACState) {
+	recv := make(chan ballot.State)
+	nr.ISAACStateManager().SetTransitSignal(func(state ballot.State) {
 		recv <- state
 	})
 
 	checkInflation := func(previous, inflationAmount common.Amount, blockHeight uint64) common.Amount {
-		var state consensus.ISAACState
+		var state ballot.State
 		t.Logf(
 			"> check inflation: block-height: %d previous: %d inflation: %d",
 			blockHeight,
 			previous,
 			inflationAmount,
 		)
-		state = <-recv // ballot.StateINIT
-		require.Equal(t, blockHeight, state.Height)
-		<-recv // ballot.StateSIGN
-		<-recv // ballot.StateACCEPT
 		state = <-recv
-		require.Equal(t, ballot.StateALLCONFIRM, state.BallotState)
+		require.Equal(t, ballot.StateINIT, state)
+
+		t.Log("height", nr.consensus.LatestBlock().Height, "round", nr.consensus.LatestRound())
+
+		state = <-recv
+		require.Equal(t, ballot.StateSIGN, state)
+		t.Log("height", nr.consensus.LatestBlock().Height, "round", nr.consensus.LatestRound())
+
+		state = <-recv
+		require.Equal(t, ballot.StateACCEPT, state)
+		t.Log("height", nr.consensus.LatestBlock().Height, "round", nr.consensus.LatestRound())
+
+		state = <-recv
+		require.Equal(t, ballot.StateALLCONFIRM, state)
 		require.Equal(t, blockHeight+1, isaac.LatestBlock().Height)
-		require.Equal(t, blockHeight, state.Height)
+		t.Log("height", nr.consensus.LatestBlock().Height, "round", nr.consensus.LatestRound())
 
 		expected := previous + inflationAmount
 		t.Logf(
@@ -942,6 +951,7 @@ func TestCheckInflationBlockIncrease(t *testing.T) {
 
 	var previous common.Amount
 	for blockHeight := uint64(1); blockHeight < 5; blockHeight++ {
+		t.Log("blockHeight", blockHeight)
 		previous = checkInflation(previous, inflationAmount, blockHeight)
 	}
 }
