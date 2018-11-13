@@ -206,6 +206,7 @@ func BallotCheckSYNC(c common.Checker, args ...interface{}) error {
 
 	if latestHeight < syncHeight-1 { // request sync until syncHeight
 		log.Debug("start sync; latestHeight < syncHeight-1")
+		checker.NodeRunner.PauseIsaacStateManager()
 		is.StartSync(syncHeight, nodeAddrs)
 		return NewCheckerStopCloseConsensus(checker, "ballot makes node in sync")
 	} else if latestHeight == syncHeight-1 {
