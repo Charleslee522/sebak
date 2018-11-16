@@ -167,8 +167,9 @@ func BallotCheckSYNC(c common.Checker, args ...interface{}) error {
 	b := checker.Ballot
 	latestHeight := is.LatestBlock().Height
 	votingHeight := b.VotingBasis().Height
+	log := checker.NodeRunner.Log()
 	if latestHeight >= votingHeight { // in consensus, not sync
-		checker.NodeRunner.Log().Debug(
+		log.Debug(
 			"return in BallotCheckSYNC; latestHeight >= votingHeight",
 			"latestHeight", latestHeight,
 			"votingHeight", votingHeight,
@@ -184,21 +185,19 @@ func BallotCheckSYNC(c common.Checker, args ...interface{}) error {
 		return nil
 	}
 
-	if is.LatestBallot.H.Hash == "" {
-		is.LatestBallot = b
-		checker.NodeRunner.Log().Debug("init LatestBallot", "LatestBallot", is.LatestBallot)
-	}
-
-	is.SaveNodeHeight(b.Source(), votingHeight)
-
 	var syncHeight uint64
 	var nodeAddrs []string
-	syncHeight, nodeAddrs, err = checker.NodeRunner.Consensus().GetSyncInfo()
+	syncHeight, nodeAddrs, err = checker.NodeRunner.Consensus().GetSyncInfo(b)
 	if err != nil {
 		return err
 	}
 
-	log := checker.Log.New(logging.Ctx{
+	if is.LatestBallot.H.Hash == "" {
+		is.LatestBallot = b
+		log.Debug("init LatestBallot", "LatestBallot", is.LatestBallot)
+	}
+
+	log = log.New(logging.Ctx{
 		"latest-height": latestHeight,
 		"sync-height":   syncHeight,
 	})
@@ -206,10 +205,8 @@ func BallotCheckSYNC(c common.Checker, args ...interface{}) error {
 	log.Debug("sync situation")
 
 	defer func() {
-		if votingHeight == syncHeight {
-			is.LatestBallot = b
-			log.Debug("update LatestBallot", "LatestBallot", is.LatestBallot)
-		}
+		is.LatestBallot = b
+		log.Debug("update LatestBallot", "LatestBallot", is.LatestBallot)
 	}()
 
 	if latestHeight < syncHeight-1 { // request sync until syncHeight
