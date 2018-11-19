@@ -65,6 +65,8 @@ func TestISAACBallotWithEmptyTransactionVoting(t *testing.T) {
 	err = ReceiveBallot(nr, ballotSIGN3)
 	require.NoError(t, err)
 
+	nr.Consensus().GetResult(ballotSIGN3.VotingBasis())
+
 	runningRounds := nr.Consensus().RunningRounds
 
 	// Check that the transaction is in RunningRounds

@@ -555,11 +555,6 @@ func (nr *NodeRunner) waitForConnectingEnoughNodes() {
 }
 
 func (nr *NodeRunner) startStateManager() {
-	// check whether current running rounds exist
-	if len(nr.consensus.RunningRounds) > 0 {
-		return
-	}
-
 	nr.isaacStateManager.Start()
 	nr.isaacStateManager.NextHeight()
 	return

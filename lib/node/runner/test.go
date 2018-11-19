@@ -235,8 +235,8 @@ func MakeConsensusAndBlock(t *testing.T, tx transaction.Transaction, nr *NodeRun
 	err = ReceiveBallot(nr, ballotSIGN2)
 	require.NoError(t, err)
 
-	rr := nr.Consensus().RunningRounds[basis.Index()]
-	require.Equal(t, 2, len(rr.Voted[proposer.Address()].GetResult(ballot.StateSIGN)))
+	// rr := nr.Consensus().RunningRounds[basis.Index()]
+	// require.Equal(t, 2, len(rr.Voted[proposer.Address()].GetResult(ballot.StateSIGN)))
 
 	ballotACCEPT1 := GenerateBallot(proposer, basis, tx, ballot.StateACCEPT, nodes[1], conf)
 	err = ReceiveBallot(nr, ballotACCEPT1)

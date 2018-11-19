@@ -315,7 +315,7 @@ func BallotIsSameProposer(c common.Checker, args ...interface{}) (err error) {
 		return
 	}
 
-	if !checker.NodeRunner.Consensus().HasRunningRound(checker.Ballot.VotingBasis().Index()) {
+	if !checker.NodeRunner.Consensus().IsVoted(checker.Ballot) {
 		err = errors.New("`RunningRound` not found")
 		return
 	}
@@ -521,15 +521,15 @@ func INITBallotValidateTransactions(c common.Checker, args ...interface{}) (err 
 func SIGNBallotBroadcast(c common.Checker, args ...interface{}) (err error) {
 	checker := c.(*BallotChecker)
 
+	if !checker.NodeRunner.Consensus().IsVoted(checker.Ballot) {
+		err = errors.New("not voted yet")
+		return
+	}
+
 	newBallot := checker.Ballot
 	newBallot.SetSource(checker.LocalNode.Address())
 	newBallot.SetVote(ballot.StateSIGN, checker.VotingHole)
 	newBallot.Sign(checker.LocalNode.Keypair(), checker.NodeRunner.Conf.NetworkID)
-
-	if !checker.NodeRunner.Consensus().HasRunningRound(checker.Ballot.VotingBasis().Index()) {
-		err = errors.New("RunningRound not found")
-		return
-	}
 
 	checker.NodeRunner.ConnectionManager().Broadcast(newBallot)
 	checker.Log.Debug("ballot will be broadcasted", "newBallot", newBallot)
@@ -549,6 +549,12 @@ func TransitStateToSIGN(c common.Checker, args ...interface{}) (err error) {
 // ballot.
 func ACCEPTBallotBroadcast(c common.Checker, args ...interface{}) (err error) {
 	checker := c.(*BallotChecker)
+
+	if !checker.NodeRunner.Consensus().IsVoted(checker.Ballot) {
+		err = errors.New("not voted yet")
+		return
+	}
+
 	if !checker.VotingFinished {
 		return
 	}
@@ -558,11 +564,6 @@ func ACCEPTBallotBroadcast(c common.Checker, args ...interface{}) (err error) {
 	newBallot.SetVote(ballot.StateACCEPT, checker.FinishedVotingHole)
 	newBallot.Sign(checker.LocalNode.Keypair(), checker.NodeRunner.Conf.NetworkID)
 
-	if !checker.NodeRunner.Consensus().HasRunningRound(checker.Ballot.VotingBasis().Index()) {
-		err = errors.New("RunningRound not found")
-		return
-
-	}
 	checker.NodeRunner.ConnectionManager().Broadcast(newBallot)
 	checker.Log.Debug("ballot will be broadcasted", "newBallot", newBallot)
 
@@ -614,7 +615,6 @@ func FinishedBallotStore(c common.Checker, args ...interface{}) error {
 	case voting.NOTYET:
 		return errors.New("invalid voting.Hole, `NOTYET`")
 	}
-	delete(checker.NodeRunner.Consensus().RunningRounds, basis.Index())
 
 	return err
 }

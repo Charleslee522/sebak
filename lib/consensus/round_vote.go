@@ -25,13 +25,6 @@ func NewRoundVote(ballot ballot.Ballot) (rv *RoundVote) {
 	return rv
 }
 
-func (rv *RoundVote) IsVoted(ballot ballot.Ballot) bool {
-	result := rv.GetResult(ballot.State())
-
-	_, found := result[ballot.Source()]
-	return found
-}
-
 func (rv *RoundVote) IsVotedByNode(state ballot.State, node string) bool {
 	result := rv.GetResult(state)
 

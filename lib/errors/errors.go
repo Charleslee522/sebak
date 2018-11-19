@@ -51,7 +51,6 @@ var (
 	TransactionInvalidSequenceID              = NewError(133, "invalid sequenceID found")
 	BlockTransactionDoesNotExists             = NewError(134, "transaction does not exists in block")
 	BlockOperationDoesNotExists               = NewError(135, "operation does not exists in block")
-	RoundVoteNotFound                         = NewError(136, "`RoundVote` not found")
 	BlockNotFound                             = NewError(137, "Block not found")
 	TransactionExcessAbilityToPay             = NewError(138, "Transaction requests over ability to pay")
 	TransactionSameSourceInBallot             = NewError(139, "Same transaction source found in ballot")
