@@ -221,7 +221,6 @@ func (is *ISAAC) RemoveRunningRoundsWithSameHeight(height uint64) {
 			continue
 		}
 
-		delete(runningRound.Transactions, runningRound.Proposer)
 		delete(runningRound.Voted, runningRound.Proposer)
 		delete(is.RunningRounds, hash)
 	}

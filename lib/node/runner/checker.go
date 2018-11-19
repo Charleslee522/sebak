@@ -529,8 +529,8 @@ func SIGNBallotBroadcast(c common.Checker, args ...interface{}) (err error) {
 	if !checker.NodeRunner.Consensus().HasRunningRound(checker.Ballot.VotingBasis().Index()) {
 		err = errors.New("RunningRound not found")
 		return
-
 	}
+
 	checker.NodeRunner.ConnectionManager().Broadcast(newBallot)
 	checker.Log.Debug("ballot will be broadcasted", "newBallot", newBallot)
 
