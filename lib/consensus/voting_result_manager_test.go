@@ -9,7 +9,7 @@ import (
 )
 
 func update(hm *VotingResultManager, source string, height, round uint64) {
-	hm.update(source, heightRound{height: height, round: round})
+	hm.update(source, votingResult{height: height, round: round, state: ballot.StateACCEPT, votingHole: voting.YES})
 }
 
 func TestUpdate(t *testing.T) {
@@ -27,29 +27,29 @@ func TestUpdate(t *testing.T) {
 	update(hm, sources[0], 10, 0)
 	update(hm, sources[1], 10, 0)
 
-	require.Equal(t, 2, len(hm.sourceHeight))
-	require.Equal(t, 1, len(hm.heightSource))
+	require.Equal(t, 2, len(hm.recentVoting))
+	require.Equal(t, 1, len(hm.votingResults))
 
 	update(hm, sources[2], 10, 0)
 	update(hm, sources[3], 10, 0)
 
-	require.Equal(t, 4, len(hm.sourceHeight))
-	require.Equal(t, 1, len(hm.heightSource))
+	require.Equal(t, 4, len(hm.recentVoting))
+	require.Equal(t, 1, len(hm.votingResults))
 
 	update(hm, sources[2], 10, 1)
 	update(hm, sources[3], 10, 1)
 
-	require.Equal(t, 4, len(hm.sourceHeight))
-	require.Equal(t, 2, len(hm.heightSource))
+	require.Equal(t, 4, len(hm.recentVoting))
+	require.Equal(t, 2, len(hm.votingResults))
 
 	update(hm, sources[0], 10, 1)
 	update(hm, sources[1], 10, 1)
 
-	require.Equal(t, 1, len(hm.heightSource))
+	require.Equal(t, 1, len(hm.votingResults))
 
 	update(hm, sources[0], 9, 10)
-	require.Equal(t, 4, len(hm.sourceHeight))
-	require.Equal(t, 1, len(hm.heightSource))
+	require.Equal(t, 4, len(hm.recentVoting))
+	require.Equal(t, 1, len(hm.votingResults))
 }
 
 func TestGetSyncInfoNormal(t *testing.T) {
@@ -73,6 +73,7 @@ func TestGetSyncInfoNormal(t *testing.T) {
 	update(hm, valids[3], 10, 0)
 
 	b := *ballot.NewBallot(valids[3], valids[3], voting.Basis{Height: 10, Round: 0}, []string{})
+	b.SetVote(ballot.StateACCEPT, voting.YES)
 
 	height, nodeAddrs, err := hm.getSyncInfo(b, 4)
 	require.NoError(t, err)
@@ -99,6 +100,7 @@ func TestGetSyncInfoBeforeFull(t *testing.T) {
 	update(hm, valids[3], 10, 0)
 
 	b := *ballot.NewBallot(valids[3], valids[3], voting.Basis{Height: 10, Round: 0}, []string{})
+	b.SetVote(ballot.StateACCEPT, voting.YES)
 
 	height, nodeAddrs, err := hm.getSyncInfo(b, 4)
 	require.NoError(t, err)
@@ -127,6 +129,7 @@ func TestGetSyncInfoInvalidBallot(t *testing.T) {
 	update(hm, valids[4], 10, 1)
 
 	b := *ballot.NewBallot(valids[4], valids[4], voting.Basis{Height: 10, Round: 1}, []string{})
+	b.SetVote(ballot.StateACCEPT, voting.YES)
 
 	_, _, err := hm.getSyncInfo(b, 4)
 	require.Error(t, err)
@@ -149,6 +152,8 @@ func TestGetSyncInfoFoundSmallestHeight(t *testing.T) {
 	update(hm, nodes[4], 35, 0)
 
 	b := *ballot.NewBallot(nodes[4], nodes[4], voting.Basis{Height: 35, Round: 0}, []string{})
+	b.SetVote(ballot.StateACCEPT, voting.YES)
+
 	_, _, err := hm.getSyncInfo(b, 4)
 	require.Error(t, err)
 
@@ -158,11 +163,15 @@ func TestGetSyncInfoFoundSmallestHeight(t *testing.T) {
 	update(hm, nodes[3], 36, 1)
 	update(hm, nodes[4], 36, 1)
 	b = *ballot.NewBallot(nodes[4], nodes[4], voting.Basis{Height: 36, Round: 1}, []string{})
+	b.SetVote(ballot.StateACCEPT, voting.YES)
+
 	_, _, err = hm.getSyncInfo(b, 4)
 	require.Error(t, err)
 
 	update(hm, nodes[0], 36, 1)
 	b = *ballot.NewBallot(nodes[4], nodes[4], voting.Basis{Height: 36, Round: 1}, []string{})
+	b.SetVote(ballot.StateACCEPT, voting.YES)
+
 	height, nodeAddrs, err := hm.getSyncInfo(b, 4)
 	require.NoError(t, err)
 	require.Equal(t, uint64(36), height)
@@ -188,6 +197,8 @@ func TestGetSyncInfoGenesis(t *testing.T) {
 	update(hm, nodes[3], 1, 0)
 
 	b := *ballot.NewBallot(nodes[3], nodes[3], voting.Basis{Height: 1, Round: 0}, []string{})
+	b.SetVote(ballot.StateACCEPT, voting.YES)
+
 	height, nodeAddrs, err := hm.getSyncInfo(b, 4)
 	require.NoError(t, err)
 	require.Equal(t, uint64(1), height)
