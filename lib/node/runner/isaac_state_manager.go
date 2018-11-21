@@ -183,6 +183,13 @@ func (sm *ISAACStateManager) NextHeight() {
 	sm.TransitISAACState(h, 0, ballot.StateINIT)
 }
 
+var (
+	tcINIT       uint64
+	tcSIGN       uint64
+	tcACCEPT     uint64
+	tcALLCONFIRM uint64
+)
+
 // In `Start()` method a node proposes ballot.
 // Or it sets or resets timeout. If it is expired, it broadcasts B(`EXP`).
 // And it manages the node round.
@@ -198,20 +205,24 @@ func (sm *ISAACStateManager) Start() {
 				sm.nr.Log().Debug("timeout", "ISAACState", sm.State())
 				switch sm.State().BallotState {
 				case ballot.StateINIT:
+					tcINIT++
 					sm.setBallotState(ballot.StateSIGN)
 					sm.transitSignal(sm.State())
 					sm.resetTimer(timer, ballot.StateSIGN)
 				case ballot.StateSIGN:
+					tcSIGN++
 					if sm.nr.localNode.State() == node.StateCONSENSUS {
 						sm.nr.Consensus().RemoveRunningRoundsExceptExpired(sm.State())
 						go sm.broadcastExpiredBallot(sm.State().Round, ballot.StateSIGN)
 					}
 				case ballot.StateACCEPT:
+					tcACCEPT++
 					if sm.nr.localNode.State() == node.StateCONSENSUS {
 						sm.nr.Consensus().RemoveRunningRoundsExceptExpired(sm.State())
 						go sm.broadcastExpiredBallot(sm.State().Round, ballot.StateACCEPT)
 					}
 				case ballot.StateALLCONFIRM:
+					tcALLCONFIRM++
 					sm.nr.Log().Error("timeout", "ISAACState", sm.State())
 					sm.NextRound()
 				}
@@ -224,6 +235,13 @@ func (sm *ISAACStateManager) Start() {
 				}
 
 				if state.BallotState == ballot.StateINIT {
+					sm.nr.Log().Info(
+						"timeout count",
+						"init", tcINIT,
+						"sign", tcSIGN,
+						"accept", tcACCEPT,
+						"allconfirm", tcALLCONFIRM,
+					)
 					begin = metrics.Consensus.SetBlockIntervalSeconds(begin)
 
 					if sm.nr.localNode.State() == node.StateCONSENSUS {

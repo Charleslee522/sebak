@@ -251,6 +251,8 @@ func BallotCheckSYNC(c common.Checker, args ...interface{}) error {
 		nodeAddrs = append(nodeAddrs, source)
 	}
 
+	// just care about syncHeight, nodeAddrs, (bool or err)
+
 	log = log.New(logging.Ctx{
 		"latest-height": latestHeight,
 		"sync-height":   syncHeight,
