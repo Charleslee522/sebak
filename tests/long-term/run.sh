@@ -62,21 +62,21 @@ docker run --rm --network host ${CLIENT_IMAGE} "payment_2"
 docker run --rm --network host ${CLIENT_IMAGE} "common_account"
 docker run --rm --network host ${CLIENT_IMAGE} "total_balance"
 
-COUNT=1
+COUNT=100
 for i in $(seq $COUNT)
 do
-    # restart without removing database
-    docker stop ${NODE1} ${NODE2} ${NODE3} ${NODE4}
+    # # restart without removing database
+    # docker stop ${NODE1} ${NODE2} ${NODE3} ${NODE4}
 
-    docker start ${NODE1} ${NODE2} ${NODE3} ${NODE4}
+    # docker start ${NODE1} ${NODE2} ${NODE3} ${NODE4}
 
-    sleep 10
+    # docker run --rm --network host ${CLIENT_IMAGE} sync.sh
 
-    # payment
-    docker run --rm --network host ${CLIENT_IMAGE} "payment_with_no_check"
+    # # payment
+    # docker run --rm --network host ${CLIENT_IMAGE} "payment_with_no_check"
 
-    # total balance
-    docker run --rm --network host ${CLIENT_IMAGE} "total_balance"
+    # # total balance
+    # docker run --rm --network host ${CLIENT_IMAGE} "total_balance"
 
     # Rerun NODE4 for checking sync
     docker stop ${NODE4}
