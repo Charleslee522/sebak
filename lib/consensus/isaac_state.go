@@ -5,6 +5,8 @@
 package consensus
 
 import (
+	"fmt"
+
 	"boscoin.io/sebak/lib/ballot"
 )
 
@@ -12,6 +14,10 @@ type ISAACState struct {
 	Height      uint64
 	Round       uint64
 	BallotState ballot.State
+}
+
+func (s ISAACState) String() string {
+	return fmt.Sprintf("height: %d, round: %d, ballotState: %s", s.Height, s.Round, s.BallotState)
 }
 
 func (s ISAACState) IsLater(target ISAACState) bool {

@@ -2,6 +2,7 @@ package ballot
 
 import (
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/btcsuite/btcutil/base58"
@@ -71,6 +72,11 @@ func (b Ballot) Serialize() (encoded []byte, err error) {
 func (b Ballot) String() string {
 	encoded, _ := json.MarshalIndent(b, "", "  ")
 	return string(encoded)
+}
+
+func (b Ballot) Logging() string {
+	str := fmt.Sprintf("[%d, %d] %s, %s, %s", b.VotingBasis().Height, b.VotingBasis().Round, b.Source(), b.State().String(), b.Vote())
+	return str
 }
 
 func (b Ballot) Version() string {

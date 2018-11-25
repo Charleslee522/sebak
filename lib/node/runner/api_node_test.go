@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"strings"
+	"sync"
 	"testing"
 	"unicode"
 
@@ -114,16 +115,23 @@ func createNewHTTP2Network(t *testing.T) (kp *keypair.Full, n *network.HTTP2Netw
 }
 
 type TestMessageBroker struct {
+	sync.RWMutex
+
 	network  *network.HTTP2Network
 	Messages []common.NetworkMessage
 }
 
 func (r *TestMessageBroker) Response(w io.Writer, o []byte) error {
+	r.Lock()
+	defer r.Unlock()
+
 	_, err := w.Write(o)
 	return err
 }
 
 func (r *TestMessageBroker) Receive(m common.NetworkMessage) {
+	r.Lock()
+	defer r.Unlock()
 	r.Messages = append(r.Messages, m)
 }
 

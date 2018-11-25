@@ -66,6 +66,13 @@ func (is *ISAAC) SetLatestVotingBasis(basis voting.Basis) {
 	is.Lock()
 	defer is.Unlock()
 
+	is.log.Debug(
+		"ISAAC.SetLatestVotingBasis",
+		"current-height", is.LatestVotingBasis.Height,
+		"current-round", is.LatestVotingBasis.Round,
+		"target-height", basis.Height,
+		"target-round", basis.Round,
+	)
 	is.LatestVotingBasis = basis
 }
 
@@ -173,7 +180,7 @@ func (is *ISAAC) CanGetVotingResult(b ballot.Ballot) (RoundVoteResult, voting.Ho
 	is.RLock()
 	defer is.RUnlock()
 
-	is.log.Debug("CanGetVotingResult", "ballot", b)
+	is.log.Debug("CanGetVotingResult", "ballot", b.Logging())
 	runningRound, found := is.RunningRounds[b.VotingBasis().Index()]
 	if !found {
 		// if RunningRound is not found, this ballot will be stopped.
@@ -224,11 +231,32 @@ func (is *ISAAC) LatestBlock() block.Block {
 	return block.GetLatestBlock(is.storage)
 }
 
-func (is *ISAAC) RemoveRunningRoundsWithSameHeight(height uint64) {
+func (is *ISAAC) RemoveRunningRoundsLowerOrEqualHeight(height uint64) {
 	for hash, runningRound := range is.RunningRounds {
 		if runningRound.VotingBasis.Height > height {
 			continue
 		}
+
+		is.log.Debug("remove running rounds lower than or equal to height", "votingBasis", runningRound.VotingBasis)
+
+		delete(runningRound.Transactions, runningRound.Proposer)
+		delete(runningRound.Voted, runningRound.Proposer)
+		delete(is.RunningRounds, hash)
+	}
+}
+
+func (is *ISAAC) RemoveRunningRoundsLowerOrEqualBasis(basis voting.Basis) {
+	for hash, runningRound := range is.RunningRounds {
+		if runningRound.VotingBasis.Height > basis.Height {
+			continue
+		}
+
+		if runningRound.VotingBasis.Height == basis.Height &&
+			runningRound.VotingBasis.Round > basis.Round {
+			continue
+		}
+
+		is.log.Debug("remove running rounds lower than or equal to basis", "votingBasis", runningRound.VotingBasis)
 
 		delete(runningRound.Transactions, runningRound.Proposer)
 		delete(runningRound.Voted, runningRound.Proposer)

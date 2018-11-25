@@ -3,6 +3,7 @@ package runner
 import (
 	"bufio"
 	"bytes"
+	"fmt"
 	"io"
 
 	"boscoin.io/sebak/lib/node/runner/api"
@@ -84,6 +85,12 @@ func BallotUnmarshal(c common.Checker, args ...interface{}) (err error) {
 		"vote":        checker.Ballot.Vote(),
 		"isMine":      checker.IsMine,
 	})
+	// checker.Log.Debug("message is verified")
+	checker.NodeRunner.Log().Debug(
+		"message is verified",
+		"ballot", checker.Ballot.Logging(),
+		"isMine", checker.IsMine,
+	)
 
 	checker.Log.Debug("message is verified")
 	return
@@ -323,9 +330,11 @@ func BallotCheckBasis(c common.Checker, args ...interface{}) (err error) {
 		err = errors.InvalidVotingBasis
 		checker.NodeRunner.Log().Debug(
 			"voting basis is invalid",
-			"voting-basis", checker.Ballot.VotingBasis(),
-			"latest-block", blk,
-			"latest-voting-basis", checker.NodeRunner.Consensus().LatestVotingBasis,
+			"voting-height", checker.Ballot.VotingBasis().Height,
+			"voting-round", checker.Ballot.VotingBasis().Round,
+			"block-height", blk.Height,
+			"latest-height", checker.NodeRunner.Consensus().LatestVotingBasis.Height,
+			"latest-round", checker.NodeRunner.Consensus().LatestVotingBasis.Round,
 		)
 		return
 	}
@@ -350,7 +359,12 @@ func BallotVote(c common.Checker, args ...interface{}) (err error) {
 	checker := c.(*BallotChecker)
 
 	checker.IsNew, err = checker.NodeRunner.Consensus().Vote(checker.Ballot)
-	checker.Log.Debug("ballot voted", "ballot", checker.Ballot, "new", checker.IsNew)
+	checker.NodeRunner.Log().Debug(
+		"ballot voted",
+		"ballot", checker.Ballot.Logging(),
+		"new", checker.IsNew,
+		"voting-result", checker.NodeRunner.Consensus().RunningRounds[checker.Ballot.VotingBasis().Index()].Voted[checker.Ballot.Proposer()],
+	)
 
 	return
 }
@@ -411,6 +425,31 @@ func BallotCheckResult(c common.Checker, args ...interface{}) (err error) {
 			"result", checker.Result,
 		)
 	}
+
+	return
+}
+
+func ExpiredInSIGN(c common.Checker, args ...interface{}) (err error) {
+	checker := c.(*BallotChecker)
+	if !checker.VotingFinished || checker.FinishedVotingHole != voting.EXP {
+		return
+	}
+
+	checker.NodeRunner.Log().Debug("Expired in SIGN")
+
+	newBallot := checker.Ballot
+	newBallot.SetSource(checker.LocalNode.Address())
+	newBallot.SetVote(checker.Ballot.State(), voting.EXP)
+	newBallot.Sign(checker.LocalNode.Keypair(), checker.NodeRunner.Conf.NetworkID)
+
+	checker.NodeRunner.BroadcastBallot(newBallot)
+
+	checker.NodeRunner.isaacStateManager.NextRound()
+	basis := checker.Ballot.VotingBasis()
+	checker.NodeRunner.Consensus().SetLatestVotingBasis(basis)
+	checker.NodeRunner.Consensus().RemoveRunningRoundsLowerOrEqualBasis(basis)
+
+	err = NewCheckerStopCloseConsensus(checker, fmt.Sprintf("ballot expired in SIGN, basis:%s", basis.Index()))
 
 	return
 }
@@ -631,8 +670,8 @@ func ACCEPTBallotBroadcast(c common.Checker, args ...interface{}) (err error) {
 	if !checker.NodeRunner.Consensus().HasRunningRound(checker.Ballot.VotingBasis().Index()) {
 		err = errors.New("RunningRound not found")
 		return
-
 	}
+
 	checker.NodeRunner.BroadcastBallot(newBallot)
 	checker.Log.Debug("ballot will be broadcasted", "newBallot", newBallot)
 
@@ -671,14 +710,15 @@ func FinishedBallotStore(c common.Checker, args ...interface{}) error {
 		checker.NodeRunner.Consensus().SetLatestVotingBasis(basis)
 
 		checker.NodeRunner.TransactionPool.RemoveFromSources(checker.LatestBlockSources...)
-		checker.NodeRunner.Consensus().RemoveRunningRoundsWithSameHeight(basis.Height)
+		checker.NodeRunner.Consensus().RemoveRunningRoundsLowerOrEqualHeight(basis.Height)
+		checker.NodeRunner.isaacStateManager.RemoveSendState(basis.Height)
 
 		err = NewCheckerStopCloseConsensus(checker, "ballot got consensus and will be stored")
 	case voting.NO, voting.EXP:
 		checker.NodeRunner.isaacStateManager.NextRound()
 		checker.NodeRunner.Consensus().SetLatestVotingBasis(basis)
 
-		checker.NodeRunner.Consensus().RemoveRunningRoundsWithSameHeight(basis.Height)
+		checker.NodeRunner.Consensus().RemoveRunningRoundsLowerOrEqualBasis(basis)
 
 		err = NewCheckerStopCloseConsensus(checker, "ballot got consensus")
 	case voting.NOTYET:
