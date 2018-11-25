@@ -55,6 +55,7 @@ var DefaultHandleSIGNBallotCheckerFuncs = []common.CheckerFunc{
 	BallotVote,
 	BallotIsSameProposer,
 	BallotCheckResult,
+	ExpiredInSIGN,
 	ACCEPTBallotBroadcast,
 	TransitStateToACCEPT,
 }
@@ -594,6 +595,10 @@ func (nr *NodeRunner) NextHeight() {
 	nr.isaacStateManager.NextHeight()
 }
 
+func (nr *NodeRunner) RemoveSendState(height uint64) {
+	nr.isaacStateManager.RemoveSendState(height)
+}
+
 var NewBallotTransactionCheckerFuncs = []common.CheckerFunc{
 	IsNew,
 	BallotTransactionsSameSource,
@@ -675,6 +680,27 @@ func (nr *NodeRunner) NodeInfo() node.NodeInfo {
 }
 
 func (nr *NodeRunner) BroadcastBallot(b ballot.Ballot) {
+	state := consensus.ISAACState{
+		Height:      b.VotingBasis().Height,
+		Round:       b.VotingBasis().Round,
+		BallotState: b.State(),
+	}
+
+	if nr.isaacStateManager.Sent(state) {
+		nr.Log().Debug(
+			"return; already sent ballot in NodeRunner.BroadcastBallot",
+			"ballot", b,
+		)
+		return
+	}
+
+	nr.Log().Debug(
+		"broadcast ballot include itself",
+		"ballot", b,
+	)
+
+	nr.isaacStateManager.SetSent(state)
+
 	go func() {
 		encoded, _ := b.Serialize()
 		nr.Network().MessageBroker().Receive(common.NewNetworkMessage(common.BallotMessage, encoded))
