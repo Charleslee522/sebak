@@ -668,7 +668,7 @@ func (nr *NodeRunner) proposeNewBallot(round uint64) (ballot.Ballot, error) {
 	theBallot.SetProposerTransaction(ptx)
 	theBallot.Sign(nr.localNode.Keypair(), nr.Conf.NetworkID)
 
-	nr.log.Debug("new ballot created", "ballot", theBallot)
+	nr.log.Debug("new ballot created", "ballot", theBallot.Logging())
 
 	nr.BroadcastBallot(*theBallot)
 
@@ -689,14 +689,14 @@ func (nr *NodeRunner) BroadcastBallot(b ballot.Ballot) {
 	if nr.isaacStateManager.Sent(state) {
 		nr.Log().Debug(
 			"return; already sent ballot in NodeRunner.BroadcastBallot",
-			"ballot", b,
+			"ballot", b.Logging(),
 		)
 		return
 	}
 
 	nr.Log().Debug(
 		"broadcast ballot include itself",
-		"ballot", b,
+		"ballot", b.Logging(),
 	)
 
 	nr.isaacStateManager.SetSent(state)

@@ -186,19 +186,18 @@ func (sm *ISAACStateManager) TransitISAACState(height uint64, round uint64, ball
 	sm.RLock()
 	current := sm.state
 	sm.RUnlock()
-	sm.nr.Log().Debug(
-		"ISAACStateManager.TransitISAACState()",
-		"current", current,
-		"height", height,
-		"round", round,
-		"ballotState", ballotState,
-	)
 
 	target := consensus.ISAACState{
 		Height:      height,
 		Round:       round,
 		BallotState: ballotState,
 	}
+
+	sm.nr.Log().Debug(
+		"ISAACStateManager.TransitISAACState()",
+		"current", current,
+		"target", target,
+	)
 
 	if current.IsLater(target) {
 		sm.nr.Log().Debug(
@@ -279,6 +278,7 @@ func (sm *ISAACStateManager) Start() {
 				} else {
 					sm.resetTimer(timer, state.BallotState)
 				}
+
 				sm.setState(state)
 				sm.transitSignal(state)
 

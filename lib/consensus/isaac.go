@@ -66,6 +66,13 @@ func (is *ISAAC) SetLatestVotingBasis(basis voting.Basis) {
 	is.Lock()
 	defer is.Unlock()
 
+	is.log.Debug(
+		"ISAAC.SetLatestVotingBasis",
+		"current-height", is.LatestVotingBasis.Height,
+		"current-round", is.LatestVotingBasis.Round,
+		"target-height", basis.Height,
+		"target-round", basis.Round,
+	)
 	is.LatestVotingBasis = basis
 }
 
@@ -173,7 +180,7 @@ func (is *ISAAC) CanGetVotingResult(b ballot.Ballot) (RoundVoteResult, voting.Ho
 	is.RLock()
 	defer is.RUnlock()
 
-	is.log.Debug("CanGetVotingResult", "ballot", b)
+	is.log.Debug("CanGetVotingResult", "ballot", b.Logging())
 	runningRound, found := is.RunningRounds[b.VotingBasis().Index()]
 	if !found {
 		// if RunningRound is not found, this ballot will be stopped.

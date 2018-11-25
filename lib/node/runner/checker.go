@@ -85,6 +85,12 @@ func BallotUnmarshal(c common.Checker, args ...interface{}) (err error) {
 		"vote":        checker.Ballot.Vote(),
 		"isMine":      checker.IsMine,
 	})
+	// checker.Log.Debug("message is verified")
+	checker.NodeRunner.Log().Debug(
+		"message is verified",
+		"ballot", checker.Ballot.Logging(),
+		"isMine", checker.IsMine,
+	)
 
 	checker.Log.Debug("message is verified")
 	return
@@ -324,9 +330,11 @@ func BallotCheckBasis(c common.Checker, args ...interface{}) (err error) {
 		err = errors.InvalidVotingBasis
 		checker.NodeRunner.Log().Debug(
 			"voting basis is invalid",
-			"voting-basis", checker.Ballot.VotingBasis(),
-			"latest-block", blk,
-			"latest-voting-basis", checker.NodeRunner.Consensus().LatestVotingBasis,
+			"voting-height", checker.Ballot.VotingBasis().Height,
+			"voting-round", checker.Ballot.VotingBasis().Round,
+			"block-height", blk.Height,
+			"latest-height", checker.NodeRunner.Consensus().LatestVotingBasis.Height,
+			"latest-round", checker.NodeRunner.Consensus().LatestVotingBasis.Round,
 		)
 		return
 	}
@@ -351,7 +359,12 @@ func BallotVote(c common.Checker, args ...interface{}) (err error) {
 	checker := c.(*BallotChecker)
 
 	checker.IsNew, err = checker.NodeRunner.Consensus().Vote(checker.Ballot)
-	checker.Log.Debug("ballot voted", "ballot", checker.Ballot, "new", checker.IsNew)
+	checker.NodeRunner.Log().Debug(
+		"ballot voted",
+		"ballot", checker.Ballot.Logging(),
+		"new", checker.IsNew,
+		"voting-result", checker.NodeRunner.Consensus().RunningRounds[checker.Ballot.VotingBasis().Index()].Voted[checker.Ballot.Proposer()],
+	)
 
 	return
 }
