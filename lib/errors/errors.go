@@ -112,4 +112,5 @@ var (
 	EndpointNotFound                          = NewError(194, "endpoint not found")
 	DiscoveryFromUnknownValidator             = NewError(195, "DiscoveryMessage from unknown validator")
 	DiscoveryPolicyDoesNotMatch               = NewError(196, "policy does not matched with discovery node")
+	BallotsNotFound                           = NewError(197, "ballots not found")
 )
