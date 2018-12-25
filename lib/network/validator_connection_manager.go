@@ -168,6 +168,10 @@ func (c *ValidatorConnectionManager) connectingValidator(v *node.Validator) {
 		if c.setConnected(v, err == nil) {
 			if err == nil {
 				c.log.Debug("validator is connected", "validator", v.Address())
+				if c.countConnectedUnlocked() == c.policy.Threshold() {
+					// NewBallotManager()
+					c.getBallots()
+				}
 			} else {
 				c.log.Debug("validator is disconnected", "validator", v.Address(), "error", err)
 			}
@@ -175,6 +179,50 @@ func (c *ValidatorConnectionManager) connectingValidator(v *node.Validator) {
 	}
 
 	return
+}
+
+func (c *ValidatorConnectionManager) getBallots() [][]byte {
+	ret := [][]byte{}
+	for addr, connected := range c.connected {
+		var validator *node.Validator
+		if validator = c.localNode.Validator(addr); validator == nil {
+			continue
+		}
+		if validator.Address() == c.localNode.Address() {
+			continue
+		}
+		if validator.Endpoint() == nil {
+			continue
+		}
+
+		if !connected {
+			continue
+		}
+
+		func(v *node.Validator) {
+			client := c.GetConnection(v.Address())
+
+			var err error
+			var res []byte
+			res, err = client.GetBallots()
+
+			if err != nil {
+				c.log.Error(
+					"failed to get ballots",
+					"error", err,
+					"validator", v.Address(),
+					"response", string(res),
+				)
+			}
+			c.log.Info(
+				"get ballots",
+				"len", len(res),
+				// "response", string(res),
+			)
+			ret = append(ret, res)
+		}(validator)
+	}
+	return ret
 }
 
 func (c *ValidatorConnectionManager) connectValidator(v *node.Validator) (err error) {
