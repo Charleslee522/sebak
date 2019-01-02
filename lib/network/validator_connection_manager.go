@@ -1,15 +1,19 @@
 package network
 
 import (
+	"bufio"
 	"errors"
+	"strings"
 	"sync"
 	"time"
 
 	logging "github.com/inconshreveable/log15"
 
+	"boscoin.io/sebak/lib/ballot"
 	"boscoin.io/sebak/lib/common"
 	"boscoin.io/sebak/lib/metrics"
 	"boscoin.io/sebak/lib/node"
+	api "boscoin.io/sebak/lib/node/runner/node_api"
 	"boscoin.io/sebak/lib/voting"
 )
 
@@ -20,10 +24,11 @@ type ValidatorConnectionManager struct {
 	network   Network
 	policy    voting.ThresholdPolicy
 
-	clients          map[ /* hash of node.Endpoint() */ string]NetworkClient
-	connected        map[ /* node.Address() */ string]bool
-	config           common.Config
-	discoveryChannel chan DiscoveryMessage
+	clients                       map[ /* hash of node.Endpoint() */ string]NetworkClient
+	connected                     map[ /* node.Address() */ string]bool
+	config                        common.Config
+	discoveryChannel              chan DiscoveryMessage
+	connectedEqualOrOverThreshold bool
 
 	log logging.Logger
 }
@@ -48,6 +53,7 @@ func NewValidatorConnectionManager(
 	}
 	cm.connected[localNode.Address()] = true
 	cm.discoveryChannel = make(chan DiscoveryMessage, 100)
+	cm.connectedEqualOrOverThreshold = false
 
 	return cm
 }
@@ -100,7 +106,7 @@ func (c *ValidatorConnectionManager) Start() {
 }
 
 // setConnected returns `true` when the validator is newly connected or
-// disconnected at first
+// disnected at first
 func (c *ValidatorConnectionManager) setConnected(v *node.Validator, connected bool) bool {
 	c.Lock()
 	defer c.Unlock()
@@ -168,12 +174,20 @@ func (c *ValidatorConnectionManager) connectingValidator(v *node.Validator) {
 		if c.setConnected(v, err == nil) {
 			if err == nil {
 				c.log.Debug("validator is connected", "validator", v.Address())
-				if c.countConnectedUnlocked() == c.policy.Threshold() {
-					// NewBallotManager()
-					c.getBallots()
+				if c.countConnectedUnlocked() < c.policy.Threshold() {
+					continue
 				}
+
+				if !c.connectedEqualOrOverThreshold {
+					c.updateBallots()
+					c.connectedEqualOrOverThreshold = true
+				}
+
 			} else {
 				c.log.Debug("validator is disconnected", "validator", v.Address(), "error", err)
+				if c.countConnectedUnlocked() < c.policy.Threshold() {
+					c.connectedEqualOrOverThreshold = false
+				}
 			}
 		}
 	}
@@ -181,8 +195,25 @@ func (c *ValidatorConnectionManager) connectingValidator(v *node.Validator) {
 	return
 }
 
-func (c *ValidatorConnectionManager) getBallots() [][]byte {
-	ret := [][]byte{}
+func (c *ValidatorConnectionManager) updateBallots() {
+	ballots := c.getBallots()
+	if len(ballots) == 0 {
+		c.log.Error(
+			"get ballots but empty",
+			"len", len(ballots),
+		)
+		return
+	}
+	c.log.Info(
+		"get ballots",
+		"len", len(ballots),
+		"ballot", ballots,
+	)
+	return
+}
+
+func (c *ValidatorConnectionManager) getBallots() []ballot.Ballot {
+	ballots := []ballot.Ballot{}
 	for addr, connected := range c.connected {
 		var validator *node.Validator
 		if validator = c.localNode.Validator(addr); validator == nil {
@@ -203,26 +234,49 @@ func (c *ValidatorConnectionManager) getBallots() [][]byte {
 			client := c.GetConnection(v.Address())
 
 			var err error
-			var res []byte
-			res, err = client.GetBallots()
-
+			var retBody []byte
+			retBody, err = client.GetBallots()
 			if err != nil {
 				c.log.Error(
 					"failed to get ballots",
 					"error", err,
 					"validator", v.Address(),
-					"response", string(res),
+					"response", string(retBody),
 				)
 			}
-			c.log.Info(
-				"get ballots",
-				"len", len(res),
-				// "response", string(res),
-			)
-			ret = append(ret, res)
+			if len(retBody) == 0 {
+				return
+			}
+			sc := bufio.NewScanner(strings.NewReader(string(retBody)))
+			for sc.Scan() {
+				var itemType api.NodeItemDataType
+				var b interface{}
+				itemType, b, err = api.UnmarshalNodeItemResponse(sc.Bytes())
+				if err != nil {
+					c.log.Error(
+						"failed to unmarshal getting response body",
+						"error", err,
+						"validator", v.Address(),
+						"itemType", itemType,
+						"response", string(retBody),
+						"result", b,
+					)
+				}
+
+				if itemType != api.NodeItemBallot {
+					return
+				}
+
+				blt, ok := b.(ballot.Ballot)
+				if !ok {
+					return
+				}
+
+				ballots = append(ballots, blt)
+			}
 		}(validator)
 	}
-	return ret
+	return ballots
 }
 
 func (c *ValidatorConnectionManager) connectValidator(v *node.Validator) (err error) {
