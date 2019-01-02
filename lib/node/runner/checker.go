@@ -7,6 +7,7 @@ import (
 	"io"
 
 	"boscoin.io/sebak/lib/node/runner/api"
+	node_api "boscoin.io/sebak/lib/node/runner/node_api"
 
 	logging "github.com/inconshreveable/log15"
 
@@ -318,7 +319,7 @@ func BallotCheckBasis(c common.Checker, args ...interface{}) (err error) {
 		checker.Ballot.VotingBasis(),
 		blk,
 	); !isValid {
-		checker.NodeRunner.Log().Error(
+		checker.NodeRunner.Log().Debug(
 			"voting basis is invalid",
 			"reason", reason,
 			"ballot-basis", checker.Ballot.VotingBasis(),
@@ -484,12 +485,12 @@ func insertMissingTransaction(nr *NodeRunner, ballot ballot.Ballot) (err error) 
 		} else if err != nil {
 			return
 		}
-		var itemType NodeItemDataType
+		var itemType node_api.NodeItemDataType
 		var d interface{}
-		if itemType, d, err = UnmarshalNodeItemResponse(l); err != nil {
+		if itemType, d, err = node_api.UnmarshalNodeItemResponse(l); err != nil {
 			return
 		}
-		if itemType == NodeItemError {
+		if itemType == node_api.NodeItemError {
 			err = d.(*errors.Error)
 			return
 		}
